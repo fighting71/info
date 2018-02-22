@@ -1,0 +1,96 @@
+direction:delegate/event/Action/逆变与协变/转型
+
+my ask >>> my answer
+
+author:yj
+
+since:2017-12-7 15:35:43
+
+	什么是delegate?
+		delegate：委托 实际上是属于 一种设计模式，用于降低程序中的耦合度。
+		
+	delegate 定义语法：
+		1.常用定义：
+			访问修饰符 delegate #returnType #delegateName(#params);
+		
+		2.无返回值定义：
+			访问修饰符 Action<#returnType> #delegateName(#params);
+			
+	deletage 有那些应用？
+		1.在linq to entity / EF 中 deletage 常用于筛选条件
+		
+		2.匿名方法
+			 Func<#paramType1, #paramType2, #returnType> #methodName = (#param1, #param2) =>
+            {
+
+                ....
+
+            };
+			
+            var result = specialFunc.Invoke(value1, value2);
+			
+			
+		3.lambdl表达式
+			u => {
+				....
+			}
+		
+		4.Thread Deletage
+			... [后续补充]
+			
+	注:使用委托实例时，可以直接指向静态方法或指向实例的方法
+		
+		
+	event的使用：
+		//1.定义消息发布的事件
+        public event #evenType #eventName;
+		
+		//2.添加事件
+        #eventName += frm.AfterParentFrmTextChange;
+		
+		public void AfterParentFrmTextChange(object sender, EventArgs e)
+        {
+            //拿到父窗体的传来的文本
+            TextBoxMsgChangeEventArg arg = e as TextBoxMsgChangeEventArg;
+            this.SetText(arg.Text);
+        }
+		
+		//3.调用事件
+        AfterMsgChangeEvent(this, new TextBoxMsgChangeEventArg() { Text = this.txtMsg.Text });
+		
+	event 与 delegate 的区别？
+		1.event 事件通过+=、-=添加或移除事件的绑定
+		
+		2.委托和事件没有可比性，因为委托是类型，事件是对象
+
+		3.其实事件是委托的一个修饰符
+		
+		4.相对而言，事件的调用只能在本类中触发，安全性较高。
+		
+	什么是逆变与协变？(note)
+			//作用：提高安全性
+            //应用类型：接口、委托；不支持值类型
+            //传入是逆变 ， 返回值是协变  
+            //in -- 逆变  out -- 协变
+            //协变：把一个子类的泛型集合赋值给父类的泛型集合  使用的为父类集合
+            //逆变：将父类给子类
+		
+	转型:
+		向上转型
+		向下转型
+			.... easy
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		

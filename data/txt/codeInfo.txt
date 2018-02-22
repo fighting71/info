@@ -1,0 +1,97 @@
+
+@* 投标 *@
+<script type="text/javascript">
+
+    function toBid(data) {
+        alert("操作状态码：" + data.State);
+        alert(data.Message);
+    }
+
+    var url = "@Url.Action("DoBid","Invest")";
+
+    function dobid(creditId, userId, vnumber, amount) {
+        if (!(creditId || userId, amount)) {
+            //参数为空
+        } else {
+            var ajaxOption = {
+                url:url,
+                type:"Post",
+                dataType:"json",
+                data:{
+                    user: {
+                        ID:userId,
+                    },
+                    creditId:creditId,
+                    amount:amount,
+                    vnumber:vnumber,
+                },
+                success:toBid,
+                error:function() {
+                    alert("网络异常！");
+                }
+            };
+        }
+    }
+
+</script>
+
+------------------------- WHERE 
+ case LogicOper.EQ:
+          str1 = leftExp + (object) " = @" + (string) (object) index;
+          break;
+        case LogicOper.NEQ:
+          str1 = leftExp + (object) " != @" + (string) (object) index;
+          break;
+        case LogicOper.GT:
+          str1 = leftExp + (object) " >@ " + (string) (object) index;
+          break;
+        case LogicOper.LT:
+          str1 = leftExp + (object) " <@ " + (string) (object) index;
+          break;
+        case LogicOper.IN:
+          string str2 = leftExp + " in (";
+          for (int index1 = 0; index1 < index - values.Length; ++index1)
+            str2 = index1 != 0 ? str2 + (object) ",@" + (string) (object) (index - values.Length + index1) : str2 + (object) " @" + (string) (object) (index - values.Length + index1);
+          str1 = str2 + ")";
+          break;
+        case LogicOper.L_LIKE:
+          str1 = leftExp + (object) " like '%'+ @" + (string) (object) index;
+          break;
+        case LogicOper.R_LIKE:
+          str1 = string.Concat(new object[4]
+          {
+            (object) leftExp,
+            (object) " like @",
+            (object) index,
+            (object) " + '%'"
+          });
+          break;
+        case LogicOper.LIKE:
+          str1 = string.Concat(new object[4]
+          {
+            (object) leftExp,
+            (object) " like '%' + @",
+            (object) index,
+            (object) " + '%'"
+          });
+          break;
+        case LogicOper.BETWEEN:
+          str1 = leftExp + (object) " between @" + (string) (object) (index - values.Length) + " and  @" + (string) (object) (index - values.Length + 1);
+          break;
+        case LogicOper.CUSTOM:
+          str1 = values[0].ToString();
+          break;
+		  
+------------------------- Regex 
+		  
+		  
+		   var url = "/Home/Index_0";
+
+            Regex regex = new Regex(@"Home/([a-zA-Z]*)_(\d)");
+
+            Console.WriteLine(regex.IsMatch(url));
+            var match = regex.Match(url);
+            foreach (var item in match.Groups)
+            {
+                Console.WriteLine(item);
+            }

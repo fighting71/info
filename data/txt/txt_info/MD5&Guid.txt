@@ -1,0 +1,49 @@
+direction:MD5/Guid
+
+author:yj
+
+since:2017-12-09 17:51:32
+
+	Guid:
+		== 生成全局唯一标识
+		Guid.NewGuid().ToString();
+		
+	MD5:
+	
+		特点：通过消息算法进行加密，加密后的消息是不完全的 
+			  即一个信息对应的MD5值只有一个  但一个MD5值对应的信息可能有多个 故MD5不可逆
+	
+		/// <summary>
+        /// 获取信息的md5信息
+        /// </summary>
+        /// <param name="info">信息对象【不能为空】</param>
+        /// <returns></returns>
+        public static string GetMd5Char(string info)
+        {
+
+            StringBuilder md5Char = null;
+
+            if (info == null || string.IsNullOrEmpty(info.ToString()))
+            {
+                Console.WriteLine("传入信息不能为空!");
+            }
+            else
+            {
+                md5Char = new StringBuilder();
+
+                using (MD5 md5  = MD5.Create())
+                {
+                    byte [] buffers = System.Text.Encoding.UTF8.GetBytes(info.ToString());
+                    byte[] byteMd5 = md5.ComputeHash(buffers);
+
+                    for (int i = 0; i < byteMd5.Length; i++)
+                    {
+                        //ToString("x2"); 转换为小写的16进制
+                        md5Char.Append(byteMd5[i].ToString("x2"));
+                    }
+
+                }
+
+            }
+            return md5Char.ToString();
+        }

@@ -1,0 +1,50 @@
+author:yj
+
+since:2018-01-12
+
+direction:basic_python
+
+
+import this:
+The Zen of Python, by Tim Peters
+
+Beautiful is better than ugly.
+Explicit is better than implicit.
+Simple is better than complex.
+Complex is better than complicated.
+Flat is better than nested.
+Sparse is better than dense.
+Readability counts.
+Special cases aren't special enough to break the rules.
+Although practicality beats purity.
+Errors should never pass silently.
+Unless explicitly silenced.
+In the face of ambiguity, refuse the temptation to guess.
+There should be one-- and preferably only one --obvious way to do it.
+Although that way may not be obvious at first unless you're Dutch.
+Now is better than never.
+Although never is often better than *right* now.
+If the implementation is hard to explain, it's a bad idea.
+If the implementation is easy to explain, it may be a good idea.
+Namespaces are one honking great idea -- let's do more of those!
+
+《蟒蛇之禅》，作者:蒂姆·彼得斯。
+美丽总比丑陋好。
+显式比隐式更好。
+简单比复杂好。
+合成比复杂好。
+平面优于嵌套。
+稀疏比稠密好。
+可读性。
+特殊情况并不足以打破规则。
+尽管实用性比纯洁。
+错误不应该是无声的。
+除非显式地沉默。
+面对模棱两可，拒绝猜测的诱惑。
+应该有一个——最好只有一个——明显的方法。
+尽管这种方式一开始可能并不明显，除非你是荷兰人。
+现在总比没有好。
+尽管从来没有比现在更好。
+如果这个实现很难解释，那就是个坏主意。
+如果这个实现很容易解释，那可能是个好主意。
+名称空间是一个伟大的想法——让我们做更多的事情!

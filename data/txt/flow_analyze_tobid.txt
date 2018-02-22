@@ -1,0 +1,1048 @@
+author:yj
+
+since:2018-1-10
+
+direction:flow_analyze_tobid
+
+	一、InvestController>>>DoBid
+		1.method description:
+			/// <summary>
+			/// 进行投标
+			/// </summary>
+			/// <param name="user"></param>
+			/// <param name="creditId">借款标编号</param>
+			/// <param name="amount">金额</param>
+			/// <param name="vnumber">优惠券编号</param>
+			/// <returns></returns>
+			[HttpPost]
+			[LoginAuth]
+			public JsonResult DoBid(User user, int creditId, decimal amount,string vnumber="");
+		
+		2.method step
+			a.非空验证
+				if (!(user.ID > 0 && creditId > 0 && amount > 0))
+				{//非空验证
+					return Json(GetResult(StateCode.State_1, null));
+				}
+				
+			b.进行投标	
+				ActiveBid activeBid;
+				StateCode code = ServiceFactory.GetService<CreditBidService>().DoBid(user.ID, creditId, amount, (int)BidMode.ManualOnPC, Settings.AppSettings("CreditBidRetUrl"), out activeBid, vnumber);
+				>>>>>>>method description
+					/// <summary>
+					/// 主动投标
+					/// </summary>
+					/// <param name="userID">用户编号</param>
+					/// <param name="creditID">借款标编号</param>
+					/// <param name="bidAmount">投资金额</param>
+					/// <param name="bidMode">投资方式 1-手动,2-自动</param>
+					/// <param name="bidRetUrl">页面返回地址</param>
+					/// <param name="activeBid">投标人账户资金详情</param>
+					/// <param name="vnumber">代金券号码</param>
+					/// <returns></returns>
+				
+				>>>>>>>method step:
+					i.获取基本数据：
+						投标人账户资金详情
+						ccountDetail accountDetail = ServiceFactory.GetService<AccountDetailService>().GetByUserId(userID);
+						  //投标人
+						User user = s.Get<User>(userID);
+						//投标人详细
+						UserDetail userDetail = s.Get<UserDetail>("where UserID = @0", userID);
+						//标主体
+						Credit credit = s.Get<Credit>(creditID);
+						//标详情
+						CreditDetail CreditDetail = s.Get<CreditDetail>("where CreditID = @0", creditID);
+						//投标情况
+						List<CreditBid> bids = s.List<CreditBid>("where CreditID = @0 and FreezeTrxId IS NOT NULL and IsEnable = @1 ", creditID, true);
+						//投标人可用金额
+						decimal levaAmount = accountDetail.AvailableAmount;
+						//借款标剩余金额
+						decimal surplusbidAmount = credit.Amount - bids.Sum(a => a.Amount);
+						//生成订单号
+						var OrdId = "16" + AlgorithmHelper.CreateNo16();
+						//代金券
+						var voucher = s.Get<UserVoucher>("where IsEnable=@0 and VNumber=@1 and UserID=@2 and Status=0 and UseStatus=0", true, vnumber, userID);
+				
+					ii.条件验证
+						//投标利率超过了最大限制
+						if (credit.Status != (int)CreditStatus.BidNow) { s.RollBack(); return StateCode.State_351; }
+						//手机认证
+						if (!user.IsValidateMobile) { s.RollBack(); return StateCode.State_352; }
+						//未创建托管账户
+						if (!user.IsValidateIDNum) { s.RollBack(); return StateCode.State_353; }
+						//竞标时间已结束
+						if (credit.EndTime < DateTime.Now) { s.RollBack(); return StateCode.State_354; }
+						//竞标时间未开始
+						if (credit.StartTime > DateTime.Now) { s.RollBack(); return StateCode.State_355; }
+						//不能投自己标
+						if (credit.UserID == user.ID) { s.RollBack(); return StateCode.State_356; }
+						//最新金额投资控制
+						//if (bidAmount < 100 || bidAmount % 100 != 0) { s.RollBack(); return StateCode.State_357; }
+						//满标控制
+						if (surplusbidAmount == 0) { s.RollBack(); return StateCode.State_358; }
+						//投资下线控制
+						if (bidAmount < credit.Limit) { s.RollBack(); return StateCode.State_359; }
+						//所投额度是否大于标剩余额度
+						if (bidAmount > surplusbidAmount) { s.RollBack(); return StateCode.State_360; }
+						//账户余额控制
+						if (levaAmount < bidAmount) { s.RollBack(); return StateCode.State_361; }
+						//当前代金券无效
+						//if (voucher==null) return StateCode.State_368;
+						//当前代金券已过期
+						if (voucher != null && voucher.OutDate < DateTime.Now) { s.RollBack(); return StateCode.State_369; }
+				
+					iii.新增投标记录
+						 var ordDate = DateTime.Now;
+						var newBid = new CreditBid()
+						{
+							Mobile = user.Mobile,
+							Amount = bidAmount,
+							BidMode = bidMode,
+							CreditID = credit.ID,
+							UserID = user.ID,
+							CreditRate = credit.LoanRate,
+							BidInterest = 0,
+							BidDay = CommonService.GetAllDays(credit.Deadline, credit.DateType),
+							UnBidInterest = 0,
+							CreatedTime = ordDate,
+							IsEnable = true,/*插入时即保存为有效,回调成功后更新冻结订单号,未成功更新冻结订单号的投标记录均为异常(实际为无效),需客服致电回访*/
+							UpdatedTime = ordDate,
+							OrdId = OrdId,
+							BidType = 0
+						};
+						s.Insert(newBid);
+				
+					iv.投标加签
+						 var tender = new HuiFu.Entity.SignReq.InitiativeTender();
+						activeBid.OrdId = tender.OrdId = OrdId;
+						activeBid.OrdDate = tender.OrdDate = ordDate.ToString("yyyyMMdd");
+						activeBid.TransAmt = tender.TransAmt = bidAmount.ToString("0.00");
+						activeBid.UsrCustId = tender.UsrCustId = user.HuiFuAccount;
+						activeBid.MaxTenderRate = tender.MaxTenderRate = "0.00";
+						activeBid.BorrowerDetails = tender.BorrowerDetails = BorrowerDetails_Str;
+						activeBid.IsFreeze = tender.IsFreeze = IsFreeze;
+						activeBid.FreezeOrdId = tender.FreezeOrdId = IsFreeze.ToLower() == "y" ? OrdId : "";
+						activeBid.RetUrl = tender.RetUrl = bidRetUrl;
+						activeBid.ReqExt = tender.ReqExt = vocher.ToString();
+						activeBid.MerPriv = tender.MerPriv = voucher == null ? "" : voucher.VNumber;//代金券唯一编码
+						//投标签名
+						if (HuiFu.HuiFuAPI.InitiativeTenderSign(ref tender))
+					
+					v.若使用优惠券》新增用户操作日志
+						//Logs.Write("主动投标 333签名;描述：3332222", "InitiativeTenderSign");
+						UserOperaRecord opRecord = new UserOperaRecord();
+						//业务ID(充值订单号)
+						opRecord.UserID = user.ID;
+						//业务ID(充值订单号)
+						opRecord.HuiFuAccount = user.HuiFuAccount;
+						//业务ID(充值订单号)
+						opRecord.BizID = OrdId;
+						//业务类型
+						opRecord.BizType = (int)OperaType.Bid;
+						//创建时间
+						opRecord.CreatedTime = DateTime.Now;
+
+						//操作类容
+						string content = "【投标代金券使用】用户：{0}，代金券ID：{1}，标ID：{2}，投标ID：{3}，投资金额：{4}，代金券金额：{5}，扩展域：{6}";
+
+
+						opRecord.Content = string.Format(content, user.LoginName, voucher.ID, credit.ID, newBid.ID, newBid.Amount, usevoucheramount, tender.ReqExt);
+						//业务IP
+						opRecord.IP = HttpHelper.GetClientIp();
+						//客户端类型
+						opRecord.ClientDevices = 0;
+
+						//写入操作记录
+						s.Insert<UserOperaRecord>(opRecord);
+					
+					vi.return 操作结果 state
+					
+			c.return Json(GetResult(code, activeBid));
+
+	  <!--投标成功回调-->
+	  <add key="CreditBidRetUrl" value="http://hyft.mob.hyft88.com/CallBack/CreditBid" />
+	
+	二、CallBackController>>>CreditBid
+		1.method description:
+			/// <summary>
+			/// 投标
+			/// </summary>
+			/// <param name="entity">投标参数</param>
+			/// <param name="AppOpen">是否为app打开</param>
+			/// <param name="Token">令牌</param>
+			/// <returns></returns>
+			public ActionResult CreditBid(InitiativeTender entity, bool AppOpen = false, string Token = null);
+				
+		2.method step:
+			a.新增用户操作日志
+				UserOperaRecord beforeOpRecord = new UserOperaRecord();
+
+				//业务ID(充值订单号)
+				beforeOpRecord.UserID = user.ID;
+				//业务ID(充值订单号)
+				beforeOpRecord.HuiFuAccount = entity.UsrCustId;
+				//业务ID(充值订单号)
+				beforeOpRecord.BizID = entity.OrdId;
+				//业务类型
+				beforeOpRecord.BizType = (int)OperaType.Bid;
+				//创建时间
+				beforeOpRecord.CreatedTime = DateTime.Now;
+				//业务IP
+				beforeOpRecord.IP = HttpHelper.GetClientIp();
+				var contenttemp = "用户：{0}，订单号:{1},交易金额:{2},参数：{3}";
+				if (AppOpen)
+				{
+					//客户端类型
+					beforeOpRecord.ClientDevices = (int)ClientDevices.Android;
+					//操作类容
+					contenttemp = "【APP端页面投标回调拉起】" + contenttemp;
+				}
+				else
+				{
+					//客户端类型
+					beforeOpRecord.ClientDevices = (int)ClientDevices.WebChat;
+					//操作类容
+					contenttemp = "【微信端页面投标回调拉起】" + contenttemp; ;
+				}
+				beforeOpRecord.Content = string.Format(contenttemp, user.LoginName, entity.OrdId, entity.TransAmt, JsonConvert.SerializeObject(entity));
+
+				//写入操作记录
+				ServiceFactory.GetService<UserOperaRecordService>().Insert(beforeOpRecord);
+			
+			b.投标回调
+				 var res = CallBackService.BidSuccess(entity);
+				 i.method description:
+					/// <summary>
+					/// 投标成功后汇付回调逻辑
+					/// </summary>
+					/// <param name="entity"></param>
+					/// <returns></returns>
+					public static StateCode BidSuccess(InitiativeTender entity)
+				
+				ii.method step
+					回签验证：
+						bool flag = HuiFuAPI.InitiativeTenderVSign(entity);
+						
+					获取基本数据：
+						 //投标信息
+                        CreditBid bidEntity = s.Get<CreditBid>("WHERE OrdId=@0 ", entity.OrdId);
+                        //标主体
+                        Credit credit = s.Get<Credit>(bidEntity.CreditID);
+						//获取投资人信息
+                        User user = s.Get<User>(bidEntity.UserID); 
+						//投资列表
+						List<CreditBid> bids = s.List<CreditBid>("where CreditID = @0 and FreezeTrxId IS NOT NULL (OR T_Credit_Bid.BidType = @2) and IsEnable = @1", bidEntity.CreditID, true,BidType.Bid);
+						
+					信息验证及调整
+						 //借款标剩余金额
+                        decimal surplusbidAmount = credit.Amount - bids.Sum(a => a.Amount);
+
+                        if (credit.Status != (int)CreditStatus.BidNow) { s.RollBack(); return StateCode.State_351; }
+                        //满标控制
+                        if (surplusbidAmount == 0)
+                        {
+                            //var usrunfreeze = HuiFuAPI.UsrUnFreeze(entity.OrdId, entity.OrdDate, entity.TransAmt, entity.TrxId);
+                            s.RollBack();
+                            return StateCode.State_358;
+                        }
+                        if (surplusbidAmount < decimal.Parse(entity.TransAmt))
+                        {
+                            s.RollBack();
+                            return StateCode.State_360;
+                        }
+                        int days = 0;
+                        switch ((DateType)credit.DateType)
+                        {
+                            case DateType.Day:
+                                days = credit.Deadline;
+                                break;
+                            case DateType.Mouth:
+                                days = credit.Deadline * 30;
+                                break;
+                            case DateType.Quarter:
+                                days = credit.Deadline * 90;
+                                break;
+                        }
+                        //设置满标状态
+                        if (surplusbidAmount == decimal.Parse(entity.TransAmt))
+                        {
+                            //还款日期后延一天
+                            var startInterestDate = DateTime.Now.AddDays(days + 1);
+                            s.ExcuteUpdate("update T_Credit set Status = @0,FullTime = @1 where ID = @2", (int)CreditStatus.VerifyInsureAudit, DateTime.Now, bidEntity.CreditID);
+                            s.ExcuteUpdate("update T_Credit_Detail set LoanTime = @0,BackTime = @1 where ID = @2", DateTime.Now, startInterestDate, bidEntity.CreditID);
+                        }
+					
+					补充流水记录
+						var fundflow = s.Get<FundsFlow>(" where OrderNo=@0", bidEntity.OrdId);
+                        if (fundflow == null || fundflow.ID <= 0)
+                        {
+                            //账户流水
+                            var fundFlow = new FundsFlow()
+                            {
+                                Amount = bidEntity.Amount,//bidEntity.Amount - (use_voucher == null ? 0 : use_voucher.VMoney),
+                                FeeType = (int)FeeType.Bid,
+                                InUserID = credit.UserID,
+                                IsFreeze = false,
+                                OutUserID = user.ID,
+                                RelationID = bidEntity.ID,
+                                IsComputing = false,
+                                CreatedTime = DateTime.Now,
+                                IsEnable = false,
+                                UpdatedTime = DateTime.Now,
+                                OrderNo = bidEntity.OrdId,
+                                Remark = "用户主动投标,投标金额" + bidEntity.Amount//(bidEntity.Amount - (use_voucher == null ? 0 : use_voucher.VMoney))
+                            };
+                            s.Insert(fundFlow);
+                        }
+
+                        //修改用户账户流水表
+                        s.ExcuteUpdate("update T_User_FundsFlow set IsEnable=@0, IsFreeze = @1, IsComputing = @2 where OrderNo= @3", true, true, true, bidEntity.OrdId);
+                        //修改投资记录表，标记已成功放款
+                        s.ExcuteUpdate("update T_Credit_Bid set FreezeTrxId= @0,IsEnable=@1 where ID=@2", entity.FreezeTrxId, true, bidEntity.ID);
+                        //修改用户是否投标状态
+                        s.ExcuteUpdate("update T_User set HasBid = @0 where ID = @1", true, bidEntity.UserID);
+						
+					触发活动处理
+                        var ret = BidVoucherGive(s, user, VoucherType.Bid, bidEntity.ID);
+						>>>>>>>>>>>method description:
+							/// <summary>
+							/// 投标回调后发放奖项（送券（代金券、加息券）、返现（红包）、加息）
+							/// </summary>
+							/// <param name="s"></param>
+							/// <param name="user"></param>
+							/// <param name="categoryid"></param>
+							/// <param name="bidid"></param>
+							/// <returns></returns>
+							public static int BidVoucherGive(ISession s ,User user,VoucherType categoryid ,long bidid);
+							
+						>>>>>>>>>>>method step
+							获取基本数据:
+								//获取投标相关的有效活动集合
+								 List<Voucher> activity = s.List<Voucher>("where  IsEnable=@0 and CategoryID=@1 and SDate<=@2 and EDate>@3 ORDER BY id DESC", true, (int)categoryid, sDate, sDate);
+								 //投资记录
+								var credit_bid = s.Get<CreditBid>(bidid);
+								//标的信息
+								var credit = s.Get<Credit>(credit_bid.CreditID);
+								//标的详情信息
+								var detail = s.Get<CreditDetail>("where CreditID=@0", credit.ID);
+								//投资期限
+								var days = CommonService.GetAllDays(credit.Deadline, credit.DateType);
+								
+							按赠送类型分组（代金券、加息券、返现、加息）
+							var category_list = activity.GroupBy(c => c.GiftType).ToList();
+							
+							遍历处理【category_list】》》》
+								 //按投标环节分组（投标、首投、被推荐人首投满额推荐人奖励、推荐人投资被推荐人奖励，满标、土豪）
+								var bidtype_list = category.GroupBy(b => b.GiftChildType).ToList();
+							
+								-------------发放券处理-------------------
+									按规则筛选信息
+										//无限制条件
+										var nowhere = bidtype.Where(m => m.GiftMinDays == 0 && m.GiftMinMoney == 0).ToList();
+										//无交易金额限制
+										var nomoney = bidtype.Where(m => m.GiftMinMoney == 0 && m.GiftMinDays > 0).ToList();
+										//无交易期限限制
+										var noday = bidtype.Where(m => m.GiftMinMoney > 0 && m.GiftMinDays == 0).ToList();
+										//易期交易金额限制
+										var daymoney = bidtype.Where(m => m.GiftMinMoney > 0 && m.GiftMinDays > 0).ToList();
+										
+										》》》根据投标类型进行处理
+											投标===
+												  ret = SaveBidVoucherGive( s, nowhere, nomoney, noday, daymoney,  credit,  detail,  credit_bid, user, sDate, days);//1--成功  0--失败
+												  
+												  >>>>>>>method description
+													/// <summary>
+													/// 
+													/// </summary>
+													/// <param name="s"></param>
+													/// <param name="nowhere"></param>
+													/// <param name="nomoney"></param>
+													/// <param name="noday"></param>
+													/// <param name="daymoney"></param>
+													/// <param name="credit"></param>
+													/// <param name="detail"></param>
+													/// <param name="credit_bid"></param>
+													/// <param name="user"></param>
+													/// <param name="sDate"></param>
+													/// <param name="days"></param>
+													/// <param name="isInterest"></param>
+													/// <param name="giveuid"></param>
+													/// <param name="cumulative_amount"></param>
+													/// <returns></returns>
+													private static int SaveBidVoucherGive(ISession s,List<Voucher> nowhere,List<Voucher> nomoney, List<Voucher> noday, List<Voucher> daymoney, Credit credit, CreditDetail detail, CreditBid credit_bid, User user,DateTime sDate,int days, bool isInterest = false,long giveuid=0, decimal cumulative_amount = 0);
+													
+												 >>>>>>>method code	
+													if (nowhere.Any())
+													{
+														NoWhere(s, nowhere, user,  credit,  detail,  credit_bid, sDate, isInterest, giveuid);
+															>>>method description
+																/// <summary>
+																/// 无限制条件
+																/// </summary>
+																/// <param name="s"></param>
+																/// <param name="nowhere"></param>
+																/// <param name="user"></param>
+																/// <param name="sDate"></param>
+																/// <returns></returns>
+																private static int NoWhere(ISession s, List<Voucher> nowhere, User user, Credit credit, CreditDetail detail, CreditBid credit_bid, DateTime sDate,bool isInterest=false, long giveuid = 0)
+															>>>method code
+																foreach (var no in nowhere)
+																{
+																	#region 保存
+																	s.Insert<UserVoucher>(new UserVoucher
+																	{
+																		VNo = no.VNo,
+																		VNumber = AlgorithmHelper.CreateNo19(Prefix(no.GiftType)),
+																		UserID = giveuid>0? giveuid: user.ID,
+																		CategoryID = no.CategoryID,
+																		CategoryName = EnumHelper.GetEnumDescByValue(typeof(VoucherType), no.CategoryID),
+																		GiftType = no.GiftType,
+																		GiftTypeName = EnumHelper.GetEnumDescByValue(typeof(GiftType), no.GiftType),
+																		GiftChildType = no.GiftChildType,
+																		GiftChildTypeName = EnumHelper.GetEnumDescByValue(typeof(BidType), no.GiftChildType),
+																		VMoney = no.VMoney,
+																		MoneyType = no.MoneyType,
+																		MinMoney = no.MinMoney,
+																		MinDays = no.MinDays,
+																		OutDate = OutDate(no),
+																		ActiveDate = new DateTime(1900, 1, 1),
+																		Status = isInterest?1:( no.GiftType == (int)GiftType.Back ? 1 : 0),
+																		UseStatus = isInterest?1:0,
+																		IsEnable = true,
+																		CreatedUserID = user.ID,
+																		CreatedTime = sDate
+																	});
+																	System.Threading.Thread.Sleep(10); //停0.01秒
+																	//加息
+																	if (isInterest)
+																	{
+																		AddInterestProcess(s, user, credit, detail, credit_bid, no);
+																	}
+																	#endregion
+																}
+																
+													}
+													if (nomoney.Any())
+													{
+														NoMoney(s, nomoney, user, credit, detail, credit_bid, sDate, days, isInterest, giveuid);
+															>>>method description
+																/// <summary>
+																/// 不限制交易金额
+																/// </summary>
+																/// <param name="s"></param>
+																/// <param name="nomoney"></param>
+																/// <param name="user"></param>
+																/// <param name="sDate"></param>
+																/// <param name="days"></param>
+																/// <returns></returns>
+																private static int NoMoney(ISession s, List<Voucher> nomoney, User user, Credit credit, CreditDetail detail, CreditBid credit_bid, DateTime sDate, int days, bool isInterest = false, long giveuid = 0);
+															>>>method code
+																 //只能领取最大的集合
+																var singles = nomoney.Where(ss => ss.IsSingleGet);
+																//领取满足条件的所有集合
+																var unsingles = nomoney.Where(ss => !ss.IsSingleGet);
+																if (singles.Any())
+																{
+																	var pre = singles.OrderBy(m => m.GiftMinDays).Where(m => m.GiftMinDays <= days).LastOrDefault();
+																	if (pre != null)
+																	{
+																		#region 保存
+																		s.Insert<UserVoucher>(new UserVoucher
+																		{
+																			VNo = pre.VNo,
+																			VNumber = AlgorithmHelper.CreateNo19(Prefix(pre.GiftType)),
+																			UserID =giveuid>0? giveuid: user.ID,
+																			CategoryID = pre.CategoryID,
+																			CategoryName = EnumHelper.GetEnumDescByValue(typeof(VoucherType), pre.CategoryID),
+																			GiftType = pre.GiftType,
+																			GiftTypeName = EnumHelper.GetEnumDescByValue(typeof(GiftType), pre.GiftType),
+																			GiftChildType = pre.GiftChildType,
+																			GiftChildTypeName = EnumHelper.GetEnumDescByValue(typeof(BidType), pre.GiftChildType),
+																			VMoney = pre.VMoney,
+																			MoneyType = pre.MoneyType,
+																			MinMoney = pre.MinMoney,
+																			MinDays = pre.MinDays,
+																			OutDate = OutDate(pre),
+																			ActiveDate = new DateTime(1900, 1, 1),
+																			Status = isInterest ? 1 : (pre.GiftType == (int)GiftType.Back ? 1 : 0),
+																			UseStatus = isInterest ? 1 : 0,
+																			IsEnable = true,
+																			CreatedUserID = user.ID,
+																			CreatedTime = sDate
+																		});
+																		System.Threading.Thread.Sleep(10); //停0.01秒
+																		//加息
+																		if (isInterest)
+																		{
+																			AddInterestProcess(s, user, credit, detail, credit_bid, pre);
+																		}
+																		#endregion
+																	}
+																}
+																if (unsingles.Any())
+																{
+																	var prelist = unsingles.OrderBy(m => m.GiftMinDays).Where(m => m.GiftMinDays <= days);
+																	foreach (var no in prelist)
+																	{
+																		#region 保存
+																		s.Insert<UserVoucher>(new UserVoucher
+																		{
+																			VNo = no.VNo,
+																			VNumber = AlgorithmHelper.CreateNo19(Prefix(no.GiftType)),
+																			UserID =giveuid>0? giveuid: user.ID,
+																			CategoryID = no.CategoryID,
+																			CategoryName = EnumHelper.GetEnumDescByValue(typeof(VoucherType), no.CategoryID),
+																			GiftType = no.GiftType,
+																			GiftTypeName = EnumHelper.GetEnumDescByValue(typeof(GiftType), no.GiftType),
+																			GiftChildType = no.GiftChildType,
+																			GiftChildTypeName = EnumHelper.GetEnumDescByValue(typeof(BidType), no.GiftChildType),
+																			VMoney = no.VMoney,
+																			MoneyType = no.MoneyType,
+																			MinMoney = no.MinMoney,
+																			MinDays = no.MinDays,
+																			OutDate = OutDate(no),
+																			ActiveDate = new DateTime(1900, 1, 1),
+																			Status = isInterest ? 1 : (no.GiftType == (int)GiftType.Back ? 1 : 0),
+																			UseStatus = isInterest ? 1 : 0,
+																			IsEnable = true,
+																			CreatedUserID = user.ID,
+																			CreatedTime = sDate
+																		});
+																		System.Threading.Thread.Sleep(10); //停0.01秒
+																		//加息
+																		if (isInterest)
+																		{
+																			AddInterestProcess(s, user, credit, detail, credit_bid, no);
+																		}
+																		#endregion
+																	}
+																}
+																
+													}
+													if (noday.Any())
+													{
+														NoDay(s, noday,  user, credit, detail, credit_bid, sDate, isInterest, giveuid, cumulative_amount);
+															>>>method description
+																 /// <summary>
+																/// 不限制标的期限
+																/// </summary>
+																/// <param name="s"></param>
+																/// <param name="noday"></param>
+																/// <param name="credit_bid"></param>
+																/// <param name="user"></param>
+																/// <param name="sDate"></param>
+																/// <returns></returns>
+																private static int NoDay(ISession s, List<Voucher> noday,  User user,Credit credit, CreditDetail detail, CreditBid credit_bid, DateTime sDate, bool isInterest = false, long giveuid = 0,decimal cumulative_amount=0);
+															
+															>>>method code
+																//只能领取最大的集合
+																var singles = noday.Where(ss => ss.IsSingleGet);
+																//领取满足条件的所有集合
+																var unsingles = noday.Where(ss => !ss.IsSingleGet);
+																if (singles.Any())
+																{
+																	var pre = singles.OrderBy(m => m.GiftMinMoney).Where(m => Convert.ToDecimal(m.GiftMinMoney) <= (cumulative_amount > 0 ? cumulative_amount : credit_bid.Amount)).LastOrDefault();
+																	if (pre != null)
+																	{
+																		#region 保存
+																		s.Insert<UserVoucher>(new UserVoucher
+																		{
+																			VNo = pre.VNo,
+																			VNumber = AlgorithmHelper.CreateNo19(Prefix(pre.GiftType)),
+																			UserID =giveuid>0? giveuid: user.ID,
+																			CategoryID = pre.CategoryID,
+																			CategoryName = EnumHelper.GetEnumDescByValue(typeof(VoucherType), pre.CategoryID),
+																			GiftType = pre.GiftType,
+																			GiftTypeName = EnumHelper.GetEnumDescByValue(typeof(GiftType), pre.GiftType),
+																			GiftChildType = pre.GiftChildType,
+																			GiftChildTypeName = EnumHelper.GetEnumDescByValue(typeof(BidType), pre.GiftChildType),
+																			VMoney = pre.VMoney,
+																			MoneyType = pre.MoneyType,
+																			MinMoney = pre.MinMoney,
+																			MinDays = pre.MinDays,
+																			OutDate = OutDate(pre),
+																			ActiveDate = new DateTime(1900, 1, 1),
+																			Status = isInterest ? 1 : (pre.GiftType == (int)GiftType.Back ? 1 : 0),
+																			UseStatus = isInterest ? 1 : 0,
+																			IsEnable = true,
+																			CreatedUserID = user.ID,
+																			CreatedTime = sDate
+																		});
+																		System.Threading.Thread.Sleep(10); //停0.01秒
+																		//加息
+																		if (isInterest)
+																		{
+																			AddInterestProcess(s, user, credit, detail, credit_bid, pre);
+																		}
+																		#endregion
+																	}
+																}
+																if (unsingles.Any())
+																{
+																	var prelist = unsingles.OrderBy(m => m.GiftMinMoney).Where(m => Convert.ToDecimal(m.GiftMinMoney) <= (cumulative_amount > 0 ? cumulative_amount : credit_bid.Amount));
+																	foreach (var no in prelist)
+																	{
+																		#region 保存
+																		s.Insert<UserVoucher>(new UserVoucher
+																		{
+																			VNo = no.VNo,
+																			VNumber = AlgorithmHelper.CreateNo19(Prefix(no.GiftType)),
+																			UserID =giveuid>0? giveuid: user.ID,
+																			CategoryID = no.CategoryID,
+																			CategoryName = EnumHelper.GetEnumDescByValue(typeof(VoucherType), no.CategoryID),
+																			GiftType = no.GiftType,
+																			GiftTypeName = EnumHelper.GetEnumDescByValue(typeof(GiftType), no.GiftType),
+																			GiftChildType = no.GiftChildType,
+																			GiftChildTypeName = EnumHelper.GetEnumDescByValue(typeof(BidType), no.GiftChildType),
+																			VMoney = no.VMoney,
+																			MoneyType = no.MoneyType,
+																			MinMoney = no.MinMoney,
+																			MinDays = no.MinDays,
+																			OutDate = OutDate(no),
+																			ActiveDate = new DateTime(1900, 1, 1),
+																			Status = isInterest ? 1 : (no.GiftType == (int)GiftType.Back ? 1 : 0),
+																			UseStatus = isInterest ? 1 : 0,
+																			IsEnable = true,
+																			CreatedUserID = user.ID,
+																			CreatedTime = sDate
+																		});
+																		System.Threading.Thread.Sleep(10); //停0.01秒
+																		//加息
+																		if (isInterest)
+																		{
+																			AddInterestProcess(s, user, credit, detail, credit_bid, no);
+																		}
+																		#endregion
+																	}
+																}
+															
+													}
+													if (daymoney.Any())
+													{
+														DayMoney(s, daymoney, user, credit, detail, credit_bid, sDate, days, isInterest, giveuid, cumulative_amount);
+															>>>method description
+																/// <summary>
+																/// 限制标的期限及交易金额
+																/// </summary>
+																/// <param name="s"></param>
+																/// <param name="daymoney"></param>
+																/// <param name="credit_bid"></param>
+																/// <param name="user"></param>
+																/// <param name="sDate"></param>
+																/// <param name="days"></param>
+																/// <returns></returns>
+																private static int DayMoney(ISession s, List<Voucher> daymoney,  User user,Credit credit, CreditDetail detail, CreditBid credit_bid, DateTime sDate, int days, bool isInterest = false, long giveuid = 0, decimal cumulative_amount = 0);
+															
+															>>>method code
+																//取最大满足条件的活动
+																var pre = daymoney.OrderBy(m => m.GiftMinMoney).Where(m => m.GiftMinDays <= days && Convert.ToDecimal(m.GiftMinMoney) <= (cumulative_amount > 0 ? cumulative_amount : credit_bid.Amount)).LastOrDefault();
+																if (pre != null && pre.ID > 0)
+																{
+																	s.Insert<UserVoucher>(new UserVoucher
+																	{
+																		VNo = pre.VNo,
+																		VNumber = AlgorithmHelper.CreateNo19(Prefix(pre.GiftType)),
+																		UserID =giveuid>0? giveuid: user.ID,
+																		CategoryID = pre.CategoryID,
+																		CategoryName = EnumHelper.GetEnumDescByValue(typeof(VoucherType), pre.CategoryID),
+																		GiftType = pre.GiftType,
+																		GiftTypeName = EnumHelper.GetEnumDescByValue(typeof(GiftType), pre.GiftType),
+																		GiftChildType = pre.GiftChildType,
+																		GiftChildTypeName = EnumHelper.GetEnumDescByValue(typeof(BidType), pre.GiftChildType),
+																		VMoney = pre.VMoney,
+																		MoneyType = pre.MoneyType,
+																		MinMoney = pre.MinMoney,
+																		MinDays = pre.MinDays,
+																		OutDate = OutDate(pre),
+																		ActiveDate = new DateTime(1900, 1, 1),
+																		Status = isInterest ? 1 : (pre.GiftType == (int)GiftType.Back ? 1 : 0),
+																		UseStatus = isInterest ? 1 : 0,
+																		IsEnable = true,
+																		CreatedUserID = user.ID,
+																		CreatedTime = sDate
+																	});
+																	System.Threading.Thread.Sleep(10); //停0.01秒
+																	//加息
+																	if (isInterest)
+																	{
+																		AddInterestProcess(s, user, credit, detail, credit_bid, pre);
+																	}
+																}
+															
+													}
+													
+												  
+											首投===
+												 var firstbid = s.GetTop<CreditBid>(1, "where UserID=@0 and IsEnable=1 and FreezeTrxId is not null ORDER BY CreatedTime ASC", user.ID);
+												if (firstbid != null && firstbid.Count > 0 && firstbid.First().ID == bidid)
+												{
+													#region 
+													ret = SaveBidVoucherGive(s, nowhere, nomoney, noday, daymoney, credit, detail, credit_bid, user, sDate, days);
+													#endregion
+												}
+												
+											首投额度推荐人===
+												var firstrcmd = s.GetTop<CreditBid>(1, "where UserID=@0 and IsEnable=1 and FreezeTrxId is not null ORDER BY CreatedTime ASC", user.ID);
+												if (firstrcmd != null && firstrcmd.Count > 0 && firstrcmd.First().ID == bidid && !string.IsNullOrWhiteSpace(user.RcmdID))
+												{
+													var rcmd_user = s.Get<User>("where ID=@0 and State=1", user.RcmdID);
+													#region 
+													if(rcmd_user != null)
+													{
+														ret = SaveBidVoucherGive(s, nowhere, nomoney, noday, daymoney, credit, detail, credit_bid, user, sDate, days,false,rcmd_user.ID);
+													}
+													#endregion
+												}
+											
+											首投推荐人（固定）===
+												 var firstrcmdfixed = s.GetTop<CreditBid>(1, "where UserID=@0 and IsEnable=1 and FreezeTrxId is not null ORDER BY CreatedTime ASC", user.ID);
+												if (firstrcmdfixed != null && firstrcmdfixed.Count > 0 && firstrcmdfixed.First().ID == bidid && !string.IsNullOrWhiteSpace(user.RcmdID))
+												{
+													var rcmd_user = s.Get<User>("where ID=@0 and State=1", user.RcmdID);
+													#region 
+													if (rcmd_user != null)
+													{
+														ret = SaveBidVoucherGive(s, nowhere, nomoney, noday, daymoney, credit, detail, credit_bid, user, sDate, days, false, rcmd_user.ID);
+													}
+													#endregion
+												}
+											满标===
+												if(credit.Status == (int)CreditStatus.VerifyInsureAudit)
+												{
+													var last = s.ExecuteScalar("select top 1 UserID from T_Credit_Bid  where CreditID=@0 and IsEnable=1 and FreezeTrxId is not null  ORDER BY id desc", credit.ID);
+
+													if (Convert.ToInt64(last) == user.ID)
+													{
+														#region 
+														ret = SaveBidVoucherGive(s, nowhere, nomoney, noday, daymoney, credit, detail, credit_bid, user, sDate, days);
+														#endregion
+													}
+												}
+											土豪===
+												 if (credit.Status == (int)CreditStatus.VerifyInsureAudit)
+												{
+													var max = s.ExecuteScalar("select top 1 UserID from T_Credit_Bid  where CreditID=@0 and IsEnable=1 and FreezeTrxId is not null  GROUP BY UserID,id  ORDER BY SUM(Amount)desc,id asc", credit.ID);
+													if (Convert.ToInt64(max) == user.ID)
+													{
+														#region 
+														ret = SaveBidVoucherGive(s, nowhere, nomoney, noday, daymoney, credit, detail, credit_bid, user, sDate, days);
+														#endregion
+													}
+													else
+													{
+														var max_user = s.Get<User>(Convert.ToInt64(max));
+														#region 
+														ret = SaveBidVoucherGive(s, nowhere, nomoney, noday, daymoney, credit, detail, credit_bid, user, sDate, days,false,max_user.ID);
+														#endregion
+													}
+												}
+											首投(单标)===
+												var bidfirst = s.ExecuteScalar("select UserID from T_Credit_Bid  where CreditID=@0 and IsEnable=1 and FreezeTrxId is not null  ORDER BY id asc", credit.ID);
+												if (Convert.ToInt64(bidfirst) == user.ID)
+												{
+													#region 
+													ret = SaveBidVoucherGive(s, nowhere, nomoney, noday, daymoney, credit, detail, credit_bid, user, sDate, days);
+													#endregion
+												}
+											累计===
+												var cumulative_amount = s.ExecuteScalar("select Sum(Amount) from T_Credit_Bid  where UserID=@0 and IsEnable=1 and FreezeTrxId is not null ", user.ID);
+												#region 
+												ret = SaveBidVoucherGive(s, nowhere, nomoney, noday, daymoney, credit, detail, credit_bid, user, sDate, days, false, 0, Convert.ToDecimal(cumulative_amount));
+												#endregion
+											默认
+												 ret = SaveBidVoucherGive(s, nowhere, nomoney, noday, daymoney, credit, detail, credit_bid, user, sDate, days);
+								-------------加息卷处理-------------------
+									code>>>
+										foreach (var bidtype in bidtype_list) {
+											// 无限制条件
+											var nowhere = bidtype.Where(m => m.GiftMinDays == 0 && m.GiftMinMoney == 0).ToList();
+											//无交易金额限制
+											var nomoney = bidtype.Where(m => m.GiftMinMoney == 0 && m.GiftMinDays > 0).ToList();
+											//无交易期限限制
+											var noday = bidtype.Where(m => m.GiftMinMoney > 0 && m.GiftMinDays == 0).ToList();
+											//易期交易金额限制
+											var daymoney = bidtype.Where(m => m.GiftMinMoney > 0 && m.GiftMinDays > 0).ToList();
+
+											#region 
+											switch (bidtype.Key)
+											{
+												case (int)BidType.Bid:
+													#region 
+													ret = SaveBidVoucherGive(s, nowhere, nomoney, noday, daymoney, credit, detail, credit_bid, user, sDate, days, true);
+													#endregion
+													break;
+												case (int)BidType.First:
+													var firstbid = s.GetTop<CreditBid>(1, "where UserID=@0 and IsEnable=1 and FreezeTrxId is not null ORDER BY CreatedTime ASC", user.ID);
+													if (firstbid != null && firstbid.Count > 0 && firstbid.First().ID == bidid)
+													{
+														#region 
+														ret = SaveBidVoucherGive(s, nowhere, nomoney, noday, daymoney, credit, detail, credit_bid, user, sDate, days, true);
+														#endregion
+													}
+													break;
+											}
+
+										}
+				
+					代金券(加息券)使用处理
+						查找代金券
+                            use_voucher = s.Get<UserVoucher>("where VNumber=@0", vnumber);
+						新增记录
+							StringBuilder vocher = new StringBuilder();
+
+							#region 修改用户代金券状态
+							vocher.Append("{\"Vocher\":{");
+							//代金券出账子账户
+							vocher.AppendFormat("\"AcctId\":\"{0}\",", Settings.AppSettings("MerInAcctId"));
+							//代金券金额，保留两位小数
+							vocher.AppendFormat("\"VocherAmt\":\"{0}\"", use_voucher.VMoney.ToString("0.00"));
+							vocher.Append("}}");
+
+							use_voucher.Status = 1;//激活
+							use_voucher.ActiveDate = DateTime.Now;
+							use_voucher.UpdatedUserID = user.ID;
+							use_voucher.UpdatedTime = DateTime.Now;
+							//修改用户代金券状态
+							s.Update<UserVoucher>(use_voucher);
+							#endregion
+
+							#region 新增用户代金券使用记录
+							var usevoucher = new UserUseVoucher
+							{
+								UserID = user.ID,
+								UserVoucherID = use_voucher.ID,
+								UserName = s.Get<UserDetail>("where UserID=@0", user.ID).RealName,
+								VNumber = use_voucher.VNumber,
+								Amount = use_voucher.VMoney,
+								Status = 0,
+								CreditID = bidEntity.CreditID,
+								BidID = bidEntity.ID,
+								Remark = use_voucher.GiftType==(int)GiftType.Voucher?"投标使用代金券": "投标使用加息券",
+								IsEnable = false,
+								CreatedUserID = user.ID,
+								CreatedTime = DateTime.Now,
+								ReqExt = use_voucher.GiftType == (int)GiftType.Voucher ? vocher.ToString():""
+							};
+							//新增用户代金券使用记录
+							s.Insert<UserUseVoucher>(usevoucher);
+						处理加息券(代金券即时返现)
+							    if (use_voucher.GiftType == (int)GiftType.Interest) {
+                                    var detail = s.Get<CreditDetail>("where CreditID=@0", credit.ID);
+
+                                    AddInterestProcess(s, user, credit, detail, bidEntity, use_voucher.VMoney, use_voucher.GiftType);
+									
+									>>>method description
+										/// <summary>
+										/// 加息券处理
+										/// </summary>
+										/// <param name="s"></param>
+										/// <param name="user"></param>
+										/// <param name="credit"></param>
+										/// <param name="detail"></param>
+										/// <param name="bid"></param>
+										/// <param name="vmoeny"></param>
+										/// <param name="bidtype"></param>
+										/// <returns></returns>
+										public static int AddInterestProcess(ISession s, User user, Credit credit, CreditDetail detail, CreditBid bid, decimal vmoeny,int bidtype)
+									>>>method code
+										 #region 添加加息信息
+										var newBid = new CreditBid()
+										{
+											Mobile = user.Mobile,
+											Amount = bid.Amount,
+											BidMode = bid.BidMode,
+											CreditID = credit.ID,
+											UserID = user.ID,
+											CreditRate = vmoeny/100,
+											BidInterest = 0,
+											BidDay = CommonService.GetAllDays(credit.Deadline, credit.DateType),
+											UnBidInterest = 0,
+											CreatedTime = DateTime.Now,
+											IsEnable = true,/*插入时即保存为有效,*/
+											BidType = bidtype == (int)GiftType.Interest ? 3 : 2,
+											UpdatedTime = DateTime.Now,
+											OrdId = "16" + AlgorithmHelper.CreateNo16()
+										};
+										s.Insert(newBid);
+										#endregion
+										string orderno = AlgorithmHelper.CreateNo19("7");
+										#region 生成还款计划
+										//switch ((LoanMode)credit.RepaymentMethod)
+										//{
+										//    case LoanMode.Disposable:
+										//        ret = LoanPlanDisposable(s, user.ID, newBid, credit, detail, orderno);
+										//        break;
+										//    case LoanMode.DengEBenXi:
+										//        ret = LoanPlan_DengEBenXi(s, user.ID, newBid, credit, detail, orderno);
+										//        break;
+										//    case LoanMode.Monthly:
+										//        ret = LoanPlan_Monthly(s, user.ID, newBid, credit, detail, orderno);
+										//        break;
+										//    case LoanMode.Quarterly:
+										//        ret = LoanPlan_Quarterly(s, user.ID, newBid, credit, detail, orderno);
+										//        break;
+										//    default:
+										//        throw new Exception("不存在的还款方式");
+										//}
+										#endregion
+									
+                                }
+                                else if(use_voucher.GiftType==(int)GiftType.Voucher)
+                                {
+                                    #region 激活代金券
+
+                                    use_voucher.Status = 1;
+                                    use_voucher.UseStatus = 0;
+                                    use_voucher.IsEnable = true;
+                                    s.Update(use_voucher);
+
+                                    usevoucher.IsEnable = true;
+                                    usevoucher.Status = 0;
+                                    usevoucher.UpdatedTime = DateTime.Now;
+                                    usevoucher.UpdatedUserID = user.ID;
+                                    s.Update(usevoucher);
+
+                                    #endregion
+                                }
+						 
+						修改用户账户流水表(红包/代金券)
+                            s.ExcuteUpdate("update T_User_FundsFlow set IsEnable=@0, IsFreeze = @1, IsComputing = @2 where RelationID= @3 and OrderNo= @4", true, true, true, bidEntity.ID, usevoucher.VNumber);
+						短信提示
+							CommonService.SendSMSBid(user.Mobile, bidEntity.Amount, days, credit.LoanRate, bidEntity.Amount + Math.Round(bidEntity.Amount * credit.LoanRate * days / 360, 2));
+                        
+						发布到第三方平台
+							//try
+							//{
+							//    //发布到第三方平台
+							//    PublishService.UpdateP2P(bidEntity.CreditId.Value);
+							//}
+							//catch (Exception e)
+							//{
+							//}
+						
+						记录投标日志
+							//DB<Entity.Basis.OperaEntity>.Execute(new Entity.Basis.OperaEntity()
+							//{
+							//    UserId = bidEntity.UserId.Value,
+							//    RelationId = bidEntity.Id.Value,
+							//    ClientAddress = ClientHelper.ClientIP,
+							//    OperaType = (int)Enums.OperaType.Bid,
+							//    ClientDevices = (int)Enums.ClientDevices.Computer,
+							//    Remark = "投标成功",
+							//    IsValid = true,
+							//    CreateTime = DateTime.Now,
+							//    UpdatedTime = DateTime.Now,
+							//}).Insert();
+					
+					新增操作日志
+						//Status = 1;
+                        msg = "投标成功，我们将竭诚陪您一起开启汇银富通网赚钱之旅！";
+    
+                        #region 增加一条操作记录
+                        UserOperaRecord record = new UserOperaRecord();
+                        //业务ID(充值订单号)
+                        record.UserID = user.ID;
+                        //业务ID(充值订单号)
+                        record.HuiFuAccount = user.HuiFuAccount;
+                        //业务ID(充值订单号)
+                        record.BizID = entity.OrdId;
+                        //业务类型
+                        record.BizType = (int)OperaType.Bid;
+                        //创建时间
+                        record.CreatedTime = DateTime.Now;
+                        var record_temp = "【成功】用户：{0}，交易标示:{1},交易金额:{2}";
+                        if (AppOpen)
+                        {
+                            //客户端类型
+                            record.ClientDevices = 0;
+                            //操作类容
+                            record_temp = "【APP端页面投标回调】" + record_temp;
+                        }
+                        else
+                        {
+                            //客户端类型
+                            record.ClientDevices = (int)ClientDevices.WebChat;
+                            //操作类容
+                            record_temp = "【微信端页面投标回调】" + record_temp;
+
+                        }
+                        record.Content = string.Format(record_temp, user.LoginName, entity.TrxId, entity.TransAmt);
+                        //业务IP
+                        record.IP = HttpHelper.GetClientIp();
+
+                        //写入操作记录
+                        ServiceFactory.GetService<UserOperaRecordService>().Insert(record);
+						
+					新增操作日志
+						 UserOperaRecord endOpRecord = new UserOperaRecord();
+
+						//业务ID(充值订单号)
+						endOpRecord.UserID = user.ID;
+						//业务ID(充值订单号)
+						endOpRecord.HuiFuAccount = entity.UsrCustId;
+						//业务ID(充值订单号)
+						endOpRecord.BizID = entity.OrdId;
+						//业务类型
+						endOpRecord.BizType = (int)OperaType.Bid;
+						//创建时间
+						endOpRecord.CreatedTime = DateTime.Now;
+						//业务IP
+						endOpRecord.IP = HttpHelper.GetClientIp();
+						var end_temp = "用户：{0}，订单号:{1},交易金额:{2}";
+						if (AppOpen)
+						{
+							//客户端类型
+							endOpRecord.ClientDevices = (int)ClientDevices.Android;
+							//操作类容
+							end_temp = "【APP端页面投标回调完成】" + end_temp;
+						}
+						else
+						{
+							//客户端类型
+							endOpRecord.ClientDevices = (int)ClientDevices.WebChat;
+							//操作类容
+							end_temp = "【微信端页面投标回调完成】" + end_temp; ;
+						}
+						endOpRecord.Content = string.Format(end_temp, user.LoginName, entity.OrdId, entity.TransAmt);
+
+						//写入操作记录
+						ServiceFactory.GetService<UserOperaRecordService>().Insert(endOpRecord);
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				

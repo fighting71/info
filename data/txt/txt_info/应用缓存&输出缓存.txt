@@ -1,0 +1,86 @@
+direction:应用缓存、输出缓存
+
+author:yj
+
+since:2017-12-09 16:08:43
+
+	[ApplicationCache]应用缓存：
+		应用缓存 -- Catch
+        作用域：整个应用程序
+        特点：保存数据可以设置保存的时间期限
+		
+		新增缓存：
+			 //1.指定键和值
+            //优势：方便
+            //劣势：无法设置缓存的有效期、依赖性等特性
+            this.HttpContext.Cache["bookInfo"] = "test";
+
+            //2.使用方法Add
+            //劣势：必须填写所有参数，灵活性低
+            //Add(String, Object, CacheDependency, DateTime, TimeSpan, CacheItemPriority, CacheItemRemovedCallback)	
+
+			//指定将项添加到 Cache 具有依赖关系、 过期时间和优先级策略和您可以使用从删除插入的项时通知您的应用程序委托对象 Cache。
+            this.HttpContext.Cache.Add("userInfo", "detailInfo", null, DateTime.Now, TimeSpan.Zero,
+                CacheItemPriority.High, null);
+
+            //3.使用Insert方法
+            //优势：可实现多种方式的方法重载
+            this.HttpContext.Cache.Insert("info1","infoDetail");
+
+            DateTime dependencies = DateTime.Now;
+            this.HttpContext.Cache.Insert("info2","infoDetail",new CacheDependency("file",dependencies));
+
+            this.HttpContext.Cache.Insert("info3","infoDetail",null,dependencies,Cache.NoSlidingExpiration);
+
+            this.HttpContext.Cache.Insert("userInfo", "detailInfo", null, DateTime.Now, TimeSpan.Zero,
+                CacheItemPriority.High, null);
+				
+	[OutputCache]输出缓存:
+		//特性实现
+        // Duration代表缓存时间  单位：s
+        //VaryByParam  获取或设置基于参数变化的值。
+        [OutputCache(Duration = 30,VaryByParam = "order;pageSize;pageIndex")]
+		   public ActionResult GetInfo(string order="test",int pageSize=5,int pageIndex=1)
+        {
+
+            i++;
+
+            string info = String.Format(@"
+			你当前访问的是第{0}次记录信息
+			页码：{1}
+			数据显示量：{2}",i,pageIndex,pageSize);
+
+            return Content(info);
+        }
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+				
+				
+				
+				
+				
+				
+				
+	
+		

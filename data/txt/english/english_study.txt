@@ -1,0 +1,42 @@
+author:yj
+
+since:2018-1-23
+
+direction:english
+
+NET Core Guide
+》》Net Core 指南
+
+06/20/2016
+8 minutes to read 
+》》8分钟阅读
+Contributors
+》》贡献者
+Rich Lander  Mike Jones  Anthony D. Green  Maira Wenzel  tompratt-AQ all
+Check out the "Getting Started" tutorials to learn how to create a simple .NET Core application. It only takes a few minutes to get your first app up and running.
+》》检出“Getting Standard”教程来学习怎样创建一个简单的.net core 应用. 只需要几分钟来让你的第一个app建立并且运行
+
+.NET Core is a general purpose development platform maintained by Microsoft and the .NET community on GitHub. It is cross-platform, supporting Windows, macOS and Linux, and can be used in device, cloud, and embedded/IoT scenarios.
+》》.net core 是由微软和.net社区在github维护的一个通用的开发平台,它是跨平台的，支持微软、macOS和linux操作系统，且能够使用在设备、云和嵌入式/IOT场景中使用。
+
+The following characteristics best define .NET Core:
+》》.net core 拥有以下特点：
+
+Flexible deployment: Can be included in your app or installed side-by-side user- or machine-wide.
+灵活的部署:可以包含在您的应用程序中，或者安装在并行的用户或机器范围内。
+
+Cross-platform: Runs on Windows, macOS and Linux; can be ported to other operating systems. The supported Operating Systems (OS), 
+				CPUs and application scenarios will grow over time, provided by Microsoft, other companies, and individuals.
+跨平台：运行在windows,macos和linux;能够传输给其他操作系统。这个支持的操作系统(OS),CPU和应用场景将随时间增长，由微软，其他公司和个人提供
+				
+Command-line tools: All product scenarios can be exercised at the command-line.
+命令行：所有的产品场景都开源在命令行上运行
+
+Compatible: .NET Core is compatible with .NET Framework, Xamarin and Mono, via the .NET Standard.
+兼容:.net core 是通过.net标准兼容.net framework, Xamarin和Mono。
+
+Open source: The .NET Core platform is open source, using MIT and Apache 2 licenses. Documentation is licensed under CC-BY. .NET Core is a .NET Foundation project.
+开源:这个 .net core 平台是开源的，使用MIT和apache 2 许可，文档是CC-BY授权许可。.net core 是一个.net 基础工程
+
+Supported by Microsoft: .NET Core is supported by Microsoft, per .NET Core Support
+由微软支持：.NET core由微软支持。.net core 支持

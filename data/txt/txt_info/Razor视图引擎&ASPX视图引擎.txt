@@ -1,0 +1,124 @@
+direction:Razor视图引擎/ASPX视图引擎
+
+author:yj
+
+since:2017-12-09 15:42:32
+
+	ASPX视图引擎 类型于java中的jsp
+		使用
+			<%  
+				....
+			%>
+			
+			<%:...%>
+			<%=...%>
+			
+		格式进行输出
+		
+	Razor视图引擎
+		使用
+			@{
+				....
+			}
+			
+			@#varName
+			
+			@#functionName(){}
+			
+		格式进行输出
+	
+	ASPX视图引擎与Razor视图引擎的区别：
+		1.Razor视图引擎的编码格式非常简便，有利于开发效率，
+		  最主要的特点是代码中可以存放html标签而aspx不能 或实现较为麻烦
+			a.如何区分代码和html标签?
+				在代码中 通过'@'自动区分代码和html标签
+				若需要在其中写代码块则需要写@{ ..... }
+		
+		2.母版视图:
+			ASPX:
+				母版视图与视图的定义不同，格式不同，即创建一个母版视图必须创建相应的文件来实现
+		  
+				......
+		  
+			Razor:
+				一个视图即可以是视图也可以是母版视图，二者没有明显区分，可以嵌套，但不可相互嵌套，指定多个
+				
+				指定母版方式：
+					@{
+						ViewBag.Title = "标题";
+						Layout = "~/Views/Shared/_Layout.cshtml";
+					}
+					
+				在母版视图中定义子视图空间
+					@* 开辟一片空间让子视图实现，
+						第一个参数：空间标识[唯一]
+						第二个参数:子视图是否必须实现此空间
+					*@
+					@RenderSection("editStyle",false)
+				
+				在子视图中实现此空间：
+					@section #空间名{
+						@*  在此处可以再次开辟空间让下一个子视图实现 *@
+						@RenderSection("importJs", false)
+					}
+				
+				[扩展]》》常用代码：
+					 @* 引入JS库 *@
+					@RenderSection("importJs",false)
+					
+					@* 引入样式库 *@
+					@RenderSection("importCss",false)
+				
+					<style type="text/css">
+					* {
+						margin: 0;
+						padding: 0;
+					}
+						
+					li {
+						list-style: none;
+					}
+						
+					a {
+						text-decoration: none;
+					}
+						
+					body{font-size: 10px;}
+					@* 编辑样式 *@
+					@RenderSection("editStyle",false)
+
+					</style>
+				
+					<div id="content">
+
+					<div id="top">
+							@* 头部信息 *@
+							<div id="guest-menu">
+								@* 用户菜单 *@
+								guest-menu
+							</div>
+							<nav id="pageNav">
+								@* 页面导航 *@
+							</nav>
+					</div>
+
+					@RenderSection("Content",false)
+
+					<div id="bottom">
+						@* 页面底部 *@
+					</div>
+
+					</div>
+					</body>
+
+					@* 编辑JS *@
+					@RenderSection("editJs",false)
+								
+			相比之间，Razor的视图更加灵活，编码更加方便	
+				
+				
+				
+				
+				
+		
+	

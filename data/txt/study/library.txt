@@ -1,0 +1,22 @@
+author:yj
+
+since:2018-2-1
+
+direction:library
+
+---------------read finish
+	C#数据结构和算法
+	改善C#程序的157个建议
+	C#并发编程经典实例
+
+---------------travel
+	[<<ASYNC>>]
+	Async in C# 5.0
+	async overview
+	Task-based Asynchronous Pattern(TAP) overview
+	
+	[<<CONCURRENCY>>]
+	Parallel Programming with Microsoft.NET（微软出版社）
+	
+	[<<REACTIVE PROGRAMME>>]
+	Introduction to Rx

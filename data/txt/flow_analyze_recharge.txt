@@ -1,0 +1,211 @@
+author:yj
+
+since:2018-1-10
+
+direction:flow_analyze_recharge
+	1.基础验证：
+		  if (string.IsNullOrEmpty(user.HuiFuAccount));//验证回复账户是否为空
+		  
+	2.准备用户充值:
+		var srv = ServiceFactory.GetService<RechargeService>();
+		var ordId = srv.ReadyRecharge(user.ID, money, gateBusiId, dcFlag, openBankId, (int)OS.Web, out msg);
+		>>>>>>>>>>method description:
+			/// <summary>
+			/// 用户充值
+			/// </summary>
+			/// <param name="userId">用户编号</param>
+			/// <param name="money">充值金额</param>
+			/// <param name="openBankId">开户银行编码</param>
+			/// <param name="gateBusId">支付网关业务代号,1.B2C--B2C 网银支付,2.B2B--B2B 网银支付,3.QP--快捷支付,4.WH--代扣(2和4暂不实用不使用)</param>
+			/// <param name="dcFlag">借/贷记标记</param>
+			/// <param name="OS">客户端类型</param>
+			/// <returns></returns>
+			public string ReadyRecharge(long userId, decimal money, string openBankId, string gateBusId, string dcFlag, int OS, out string msg);
+		
+		>>>>>>>>>>method step:
+			a.新增充值记录
+				var rechargeEntity = new Recharge()
+                {
+                    IsEnable = false,
+                    CreatedTime = ordDate,
+                    Amount = money,
+                    UserID = userId,
+                    //RechargeMode 无意义
+                    RechargeMode = 4,// (int)Grameen.Extension.Enums.RechargeMode.HuifuPay,
+                    IsAudit = false,
+                    OrderNumber = orderId,
+                    OrderNo = string.Empty,
+                    TradeNo = string.Empty,
+                    Remark = "用户" + userId.ToString() + "充值" + money.ToString() + "元",
+                    DcFlag = dcFlag,
+                    GateBusiCode = gateBusId,
+                    OpenBankCode = openBankId,
+                    RechargeSource = OS,
+                };
+                
+                Insert(rechargeEntity);
+			
+			b.新增操作记录
+				  UserOperaRecord opRecord = new UserOperaRecord();
+                //业务ID(充值订单号)
+                opRecord.UserID = user.ID;
+                //业务ID(充值订单号)
+                opRecord.HuiFuAccount = user.HuiFuAccount;
+                //业务ID(充值订单号)
+                opRecord.BizID = orderId;
+                //业务类型
+                opRecord.BizType = (int)OperaType.Recharge;
+                //创建时间
+                opRecord.CreatedTime = DateTime.Now;
+                //操作类容
+                //"用户：{0},投标成功回调操作，订单号:{1},标信息:{2},投标金额:{3}";
+                string content = "【发起充值操作】用户:{0}，订单号:{1},充值金额:{2}，开户银行编码:{3},支付网关业务代号:{4},借/贷记标记{5}";
+                opRecord.Content = string.Format(content, user.LoginName, orderId, money, openBankId, gateBusId, dcFlag);
+                //业务IP
+                opRecord.IP = HttpHelper.GetClientIp();
+                //客户端类型
+                opRecord.ClientDevices = OS;
+				
+                ServiceFactory.GetService<UserOperaRecordService>().Insert(opRecord);
+				
+			c.新增资金流水
+				var fundsFlowEntity = new FundsFlow()
+				{
+					OrderNo = orderId,
+					Amount = money,
+					CreatedTime = ordDate,
+					IsEnable = false,
+					OutUserID = (int)PayPlatform.Platform,
+					InUserID = userId,
+					FeeType = (int)FeeType.Recharge,
+					IsFreeze = true,
+					RelationID = RechargeId,
+					Remark = "用户充值",
+					IsComputing = true
+				};
+
+				ServiceFactory.GetService<FundsFlowService>().Insert(fundsFlowEntity);			
+				
+			d.汇付接口充值
+				
+                var ret = srv.Recharge(user, ordId, null, RechargeRetUrl);
+				>>>>>>>>method description:
+					/// <summary>
+					/// 充值
+					/// </summary>
+					/// <param name="user"></param>
+					/// <param name="orderNo"></param>
+					/// <param name="retUrl"></param>
+					/// <returns></returns>
+					public NetSave Recharge(User user, string orderNo, string pageType, string retUrl, string openAcctId = "")
+				
+				>>>>>>>>method step
+					i.获取充值记录
+					 var rechargeEntity = ServiceFactory.GetService<RechargeService>().GetByOrdNo(orderNo);
+					 
+					ii.获取网页充值实体
+					NetSave entity = new NetSave();
+					entity.DcFlag = rechargeEntity.DcFlag;
+					entity.GateBusiId = rechargeEntity.GateBusiCode;
+					entity.OpenBankId = rechargeEntity.OpenBankCode;
+					entity.OrdId = orderNo;
+					entity.OrdDate = (rechargeEntity.CreatedTime ?? DateTime.Now).ToString("yyyyMMdd");
+					entity.TransAmt = rechargeEntity.Amount.ToString("0.00");
+					entity.UsrCustId = user.HuiFuAccount;
+					entity.RetUrl = retUrl;
+					if (!string.IsNullOrEmpty(pageType))
+					{
+						entity.PageType = pageType;
+					}
+					if (!string.IsNullOrEmpty(openAcctId) && rechargeEntity.GateBusiCode == "QP")
+					{
+						entity.OpenAcctId = openAcctId;
+					}
+					
+					iii.return 
+						return entity;
+				
+		3.处理公告信息
+			a.查看活动信息参数配置
+			  ConfigParam param_act_open_conditions = ServiceFactory.GetService<SysConfigParamService>().GetByKey("RechargeActOpenConditions");
+		
+			b.触发活动
+				var vprocess = ServiceFactory.GetService<VoucherService>().VoucherProcess(user, VoucherType.Recharge);
+				>>>>>>>>>method description:
+					/// <summary>
+					/// 活动触发后处理（一活动一红包）
+					/// 0:【异常】1:【成功】2:【已存在】
+					/// </summary>
+					/// <param name="user"></param>
+					/// <param name="categoryId"></param>
+					/// <returns></returns>
+					public int VoucherProcess(User user, VoucherType categoryId);
+				
+				>>>>>>>>>method step:
+					i.获取代金券活动
+						 List<Voucher> activity = s.GetTop<Voucher>(1, "where  IsEnable=@0 and CategoryID=@1 and SDate<=@2 and EDate>@3 ORDER BY id DESC", true, (int)categoryId, sDate, sDate);
+					
+					ii.处理充值活动
+						if (categoryId == VoucherType.Recharge)//验证充值类型
+                        {
+                            uservoucher = s.GetTop<UserVoucher>(1, "where UserID=@0 and CategoryID=@1 and CreatedTime>@2 and CreatedTime<@3", user.ID, categoryId,act.SDate,act.EDate);
+                        }
+                        else
+                        {
+                            uservoucher = s.GetTop<UserVoucher>(1, "where UserID=@0 and CategoryID=@1 ", user.ID, categoryId);
+                        }
+					
+					iii. 根据配置的有效期类型，获取此活动有效期
+						switch (act.ValidityType)
+                        {
+                            //固定有效期
+                            case (int)ValidityType.Fixedly:
+                                outDate = act.ValidityDate.Value;
+                                break;
+                            //累加有效期
+                            case (int)ValidityType.AddUp:
+                                outDate = DateTime.Now.AddDays(act.ValidityDay);
+                                break;
+                        }
+					
+					iv.调整用户代金券
+						 if (uservoucher.Count == 0)
+                        {
+                            s.Insert(userVoucher);
+                        }
+                        else if(!uservoucher[0].IsEnable)
+                        {
+                            userVoucher.ID = uservoucher.FindLast(o => o.ID > 0).ID;
+                            s.Update(userVoucher);
+                        }
+					
+					v.return
+						 ret = (uservoucher.Count == 1 && uservoucher[0].IsEnable) ? 2 : 1;
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				

@@ -1,0 +1,86 @@
+
+author:yj
+
+since:2017-12-24 17:30
+
+direction:webservice
+
+	1.常见特性：
+		
+	[WebService(Namespace = "http://tempuri.org/")]//XML Web services 的默认 XML 命名空间。
+    [WebServiceBinding(ConformsTo = WsiProfiles.BasicProfile1_1)]//获取或设置绑定声称所符合的 Web 服务互操作性 (WSI) 规范。
+    [System.ComponentModel.ToolboxItem(false)]// 初始化 System.ComponentModel.ToolboxItemAttribute 类的新实例，并指定是否使用默认初始化值。
+    
+    [System.Web.Script.Services.ScriptService]// 若要允许使用 ASP.NET AJAX 从脚本中调用此 Web 服务，请取消注释以下行。 
+    public class MyWebService : System.Web.Services.WebService
+    {
+
+		//
+        // 摘要:
+        //     初始化 System.Web.Services.WebMethodAttribute 类的新实例。
+        //
+        // 参数:
+        //   enableSession:
+        //     初始化是否为 XML Web services 方法启用会话状态。
+        //
+        //   transactionOption:
+        //     初始化 XML Web services 方法的事务支持。
+        //
+        //   cacheDuration:
+        //     初始化响应的缓存秒数。
+        //
+        //   bufferResponse:
+        //     初始化是否缓存该请求的响应。
+		//public WebMethodAttribute(bool enableSession, TransactionOption transactionOption, int cacheDuration, bool bufferResponse);
+        [WebMethod]
+        public string HelloWorld()
+        {
+            return "Hello World";
+        }
+    }
+
+		WebMethod属性：
+			
+			// 摘要:
+			//     获取或设置是否缓存该请求的响应。
+			//
+			// 返回结果:
+			//     如果缓存该请求的响应，则为 true；否则为 false。 默认值为 true。
+			public bool BufferResponse { get; set; }
+			//
+			// 摘要:
+			//     获取或设置响应应在缓存中保留的秒数。
+			//
+			// 返回结果:
+			//     响应应在缓存中保留的秒数。 默认值为 0，表示不缓存响应。
+			public int CacheDuration { get; set; }
+			//
+			// 摘要:
+			//     描述 XML Web services 方法的描述性消息。
+			//
+			// 返回结果:
+			//     描述 XML Web services 方法的描述性消息。 默认值为 System.String.Empty。
+			public string Description { get; set; }
+			//
+			// 摘要:
+			//     指示是否为 XML Web services 方法启用会话状态。
+			//
+			// 返回结果:
+			//     如果为 XML Web services 方法启用会话状态，则为 true。 默认值为 false。
+			public bool EnableSession { get; set; }
+			//
+			// 摘要:
+			//     在传递到 XML Web services 方法和从 XML Web services 方法返回的数据中用于 XML Web services 方法的名称。
+			//
+			// 返回结果:
+			//     在传递到 XML Web services 方法和从 XML Web services 方法返回的数据中用于 XML Web services 方法的名称。
+			//     默认值是 XML Web services 方法的名称。
+			public string MessageName { get; set; }
+			//
+			// 摘要:
+			//     指示 XML Web services 方法的事务支持。
+			//
+			// 返回结果:
+			//     XML Web services 方法的事务支持。 默认值为 System.EnterpriseServices.TransactionOption.Disabled。
+			public TransactionOption TransactionOption { get; set; }
+	

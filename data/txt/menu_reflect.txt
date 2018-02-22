@@ -1,0 +1,125 @@
+author:yj	
+
+since:2018-1-4
+
+direction:menu reflect
+
+		/// <summary>
+        /// 获取枚举Json列表
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static MvcHtmlString GetMenuJsonList<T>()
+        {
+            StringBuilder result = new StringBuilder("{");
+
+            var list = StatusCode_Tools.GetFeeTypeList();
+            foreach (var k in EnumHelper.GetEnums(typeof(T)))
+            {
+                result.Append(string.Format("{0}:\"{1}\",", k.Key, k.Value));
+            }
+
+            result.Append("}");
+
+            return new MvcHtmlString(result.ToString());
+
+        }
+		
+		public static Dictionary<int, string> GetEnums(Type t)
+    {
+      Dictionary<int, string> dictionary = new Dictionary<int, string>();
+      if (!t.IsEnum)
+        return dictionary;
+      foreach (object obj in Enum.GetValues(t))
+        dictionary.Add((int) obj, EnumExtensions.GetDescription((Enum) obj));
+      return dictionary;
+    }
+
+	 public static string GetDescription(this Enum value)
+    {
+      FieldInfo field = value.GetType().GetField(value.ToString());
+      if (field != (FieldInfo) null)
+        return EnumHelper.GetDescription(field);
+      return string.Empty;
+    }
+	
+	 public static string GetDescription(FieldInfo field)
+    {
+      string str = field.Name;
+      object[] customAttributes = field.GetCustomAttributes(false);
+      if ((uint) customAttributes.Length > 0U)
+      {
+        for (int index = 0; index < customAttributes.Length; ++index)
+        {
+          EnumAttribute enumAttribute = customAttributes[index] as EnumAttribute;
+          if (string.IsNullOrEmpty(enumAttribute.Culture))
+            str = enumAttribute.Description;
+          if (string.Compare(enumAttribute.Culture, Thread.CurrentThread.CurrentUICulture.Name, true) == 0)
+            return enumAttribute.Description;
+        }
+      }
+      return str;
+    }
+	
+	[AttributeUsage(AttributeTargets.Enum | AttributeTargets.Field, AllowMultiple = true)]
+  public class EnumAttribute : Attribute
+  {
+    public string Culture { get; set; }
+
+    public string Description { get; set; }
+
+    public EnumAttribute(string description)
+    {
+      this.Description = description;
+      this.Culture = string.Empty;
+    }
+
+    public EnumAttribute(string description, string culture)
+    {
+      this.Description = description;
+      this.Culture = culture;
+    }
+  }
+	
+	
+		/// <summary>
+        /// 根据枚举值获取枚举描述信息（单个）
+        /// </summary>
+        /// <typeparam name="TEnum">枚举</typeparam>
+        /// <param name="value">枚举值</param>
+        /// <returns></returns>
+        public static string GetEnumDescription<TEnum>(object value)
+        {
+            string result = string.Empty;
+            Type enumType = typeof(TEnum);
+            if (enumType.IsEnum)
+            {
+                var name = System.Enum.GetName(enumType, Convert.ToInt32(value));
+                if (name != null)
+                {
+                    object[] objs = enumType.GetField(name).GetCustomAttributes(typeof(EnumAttribute), false);
+                    if (objs != null && objs.Length > 0)
+                    {
+                        EnumAttribute attr = objs[0] as EnumAttribute;
+                        result = attr.Description;
+                    }
+                }
+            }
+            return result;
+        }
+	
+	//通过类型、值获取枚举
+	public static string GetEnumDescByValue(Type type, object value)
+    {
+      string str = string.Empty;
+      if (value == null || !type.IsEnum)
+        return str;
+      foreach (FieldInfo field in type.GetFields(BindingFlags.Static | BindingFlags.Public))
+      {
+        if ((int) Enum.Parse(type, field.Name, true) == Convert.ToInt32(value))
+          return EnumHelper.GetDescription(field);
+      }
+      return str;
+    }
+	
+	

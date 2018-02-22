@@ -1,0 +1,21 @@
+﻿  //真正处理跨线程调用
+
+            //Thread thread = new Thread(() => {
+
+            //    if (btnLoop.InvokeRequired)//InvokeRequired：如果是别的线程创建的此控件
+            //    {
+            //        //找到创建btnLoop控件的线程，执行
+            //        btnLoop.Invoke(new Action<string>(s => {
+            //            this.btnLoop.Text = s; }), 
+            //            DateTime.Now.ToString());
+            //    }
+            //    else
+            //    {
+            //        this.btnLoop.Text = DateTime.Now.ToString();
+            //    }
+
+            //    while (true)
+            //    {
+            //        Console.WriteLine(DateTime.Now.ToString());
+            //    }
+            //});

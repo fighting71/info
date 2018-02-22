@@ -1,0 +1,404 @@
+direction:Excel/xml/json Operation&convert
+
+author:yj
+
+since:2017-12-10 11:00:23
+
+	1.Excel操作：
+	
+		相关dll:NPOL
+		
+		a.写入：
+			//1.创建工作簿
+            IWorkbook workbook = new HSSFWorkbook();
+
+            //2.创建工作表
+            ISheet sheet = workbook.CreateSheet("订单信息");
+
+            //2.1获取相应数据
+            var data = dbContext.orderinfo.ToList();
+
+            //2.2创建首行信息
+            IRow row_first = sheet.CreateRow(0);
+            row_first.CreateCell(0).SetCellValue("编号");
+            row_first.CreateCell(1).SetCellValue("描述");
+            row_first.CreateCell(2).SetCellValue("订单号");
+            row_first.CreateCell(3).SetCellValue("创建时间");
+            row_first.CreateCell(4).SetCellValue("订单状态码");
+
+            //3.遍历创建行
+            for (int i = 1; i <= data.Count; i++)
+            {
+                //3.1创建行
+                var row = sheet.CreateRow(i);
+                var info = data[i - 1];
+
+                //3.2写入列
+                row.CreateCell(0).SetCellValue(info.ID);
+                row.CreateCell(1).SetCellValue(info.Description);
+                row.CreateCell(2).SetCellValue(info.OrderNo);
+                row.CreateCell(4).SetCellValue(info.State.Value);
+                //创建一个单元格
+                var cell = row.CreateCell(3);
+                //创建一个单元格样式
+                ICellStyle cellStyle = workbook.CreateCellStyle();
+                cellStyle.DataFormat = HSSFDataFormat.GetBuiltinFormat("m/d/yy h:mm");
+                //设置当前单元格应用cellStyle样式
+                cell.CellStyle = cellStyle;
+                cell.SetCellValue(info.CreateTime.Value);
+
+            }
+
+            //4.保存工作簿信息
+            using (FileStream fs = File.OpenWrite("orderList.xls"))
+            {
+                workbook.Write(fs);
+            }
+		
+		b.读取:
+			 //1.选择文件
+            //1.1创建文件选择对话框对象
+            OpenFileDialog fileDialog = new OpenFileDialog();
+
+            //1.2设置相关数据
+            fileDialog.Multiselect = false;//是否可以多选
+            fileDialog.Filter = "Excel文件(*.xls)|*.xls";//设置选择的文件类型
+            if (fileDialog.ShowDialog() == DialogResult.OK)
+            {
+                var openFile = fileDialog.OpenFile();
+
+                //2.创建工作簿控件
+                IWorkbook workbook = new HSSFWorkbook(openFile);
+
+                //3.获取表
+                ISheet sheet = workbook.GetSheetAt(0);
+
+                List<orderinfo> orderinfos = new List<orderinfo>();
+
+                //4.遍历行获取信息 LastRowNum -- 最后一行的索引
+                for (int i = 1; i <= sheet.LastRowNum; i++)
+                {
+                    IRow row = sheet.GetRow(i);
+
+                    orderinfo info = new orderinfo();
+
+                    info.ID = (int)row.GetCell(0).NumericCellValue;
+                    info.Description = row.GetCell(1).StringCellValue;
+                    info.OrderNo = row.GetCell(2).StringCellValue;
+                    //日期格式数据处理
+                    ICell cell = row.GetCell(3);
+
+                    //如果当前的列是一个日期类型，那么直接把该值作为一个number类型来读取，读取到后，通过DateTime.FromOADate()来转换为DateTime类型。
+                    info.CreateTime = DateTime.FromOADate(cell.NumericCellValue);
+                    info.State = (int)row.GetCell(4).NumericCellValue;
+
+                    orderinfos.Add(info);
+
+                }
+				//5.展示数据
+			   this.dgv_orderList.DataSource = orderinfos;
+			}
+			
+	
+	2.json Operation
+	
+		//转换为json
+		 public static string GetJSON(object obj)
+        {
+            string json = JsonConvert.SerializeObject(obj);
+            return json;
+        }
+		
+		//解析json
+        public static JObject DeserializeObject(string json)
+        {
+            JObject jobj = JsonConvert.DeserializeObject(json) as JObject;
+            return jobj;
+        }
+		
+		 /// <summary>
+        /// json字符串转换成对象
+        /// </summary>
+        /// <typeparam name="T">对象类型</typeparam>
+        /// <param name="jsonStr">json字符串</param>
+        /// <returns></returns>
+        public static T ParseFormByJson<T>(string jsonStr)
+        {
+            T obj = Activator.CreateInstance<T>();
+
+            if (!string.IsNullOrEmpty(jsonStr))
+            {
+                using (System.IO.MemoryStream ms = new System.IO.MemoryStream(System.Text.Encoding.UTF8.GetBytes(jsonStr)))
+                {
+                    try
+                    {
+                        System.Runtime.Serialization.Json.DataContractJsonSerializer
+                            serializer = new System.Runtime.Serialization.Json.DataContractJsonSerializer(typeof(T));
+                        return (T)serializer.ReadObject(ms);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Write(ex);
+                        return default(T);
+                    }
+                }
+            }
+            else
+            {
+                return obj;
+            }
+            //JsonSerializer serializer = new JsonSerializer();
+            //StringReader sr = new StringReader(jsonStr);
+            //T t = serializer.Deserialize<T>(new JsonTextReader(sr));
+            ////T t = (T)o;
+            //sr.Close();
+            //return t;
+        }
+	
+	convert:
+	
+		public static int ToInt(this string str)
+        {
+            int result = 0;
+            int.TryParse(str, out result);
+            return result;
+        }
+
+        public static int ToInt(this object str)
+        {
+            int result = 0;
+            if (null != str)
+            {
+                int.TryParse(str.ToString(), out result);
+            }
+            return result;
+        }
+
+        public static long ToLong(this string str)
+        {
+            long result = 0;
+            long.TryParse(str, out result);
+            return result;
+        }
+
+        public static long ToLong(this object str)
+        {
+            long result = 0;
+            if (null != str)
+            {
+                long.TryParse(str.ToString(), out result);
+            }
+            return result;
+        }
+
+        public static decimal ToDecimal(this string str)
+        {
+            decimal result = 0;
+            decimal.TryParse(str, out result);
+            return result;
+        }
+
+        public static decimal ToDecimal(this object str)
+        {
+            decimal result = 0;
+            if (null != str)
+            {
+                decimal.TryParse(str.ToString(), out result);
+            }
+            return result;
+        }
+
+        public static double ToDouble(this string str)
+        {
+            double result = 0;
+            double.TryParse(str, out result);
+            return result;
+        }
+
+        public static double ToDouble(this object str)
+        {
+            double result = 0;
+            if (null != str)
+            {
+                double.TryParse(str.ToString(), out result);
+            }
+            return result;
+        }
+
+        public static DateTime ToDateTime(this string str)
+        {
+            DateTime result = DateTime.MinValue;
+            if (!string.IsNullOrEmpty(str))
+                DateTime.TryParse(str, out result);
+            return result;
+        }
+
+
+        public static string ToPinYin(this char ch)
+        {
+            string t = "";
+            try
+            {
+                ChineseChar chineseChar = new ChineseChar(ch);
+                t = chineseChar.Pinyins[0].ToString();
+            }
+            catch 
+            {
+                t = string.Concat(ch);
+            }
+            return t;
+        }
+
+        public static string ToFirstPinYin(this string str)
+        {
+            StringBuilder result = new StringBuilder(str.Length);
+            foreach (char ch in str)
+            {
+                string py = ToPinYin(ch);
+                result.Append(py[0]);
+            }
+            return result.ToString();
+        }
+
+        public static byte[] ToBytesFromHexString(this string str)
+        {
+            if (str.Length % 2 > 0)
+                return null;
+            else
+            {
+                byte[] result = new byte[str.Length / 2];
+                for (int i = 0; i < str.Length/2; i++)
+                {
+                    byte b = Convert.ToByte(str.Substring(i * 2, 2), 16);
+                    result[i] = b;
+                }
+                return result;
+            }
+        }
+
+        public static string ToHexString(this byte[] bytes)
+        {
+            string result = BitConverter.ToString(bytes);
+            return result.Replace("-", "");
+        }
+
+        public static string ToPostArgs(this object obj)
+        {
+            Type t = obj.GetType();
+            StringBuilder post = new StringBuilder();
+            System.Reflection.PropertyInfo[] properes = t.GetProperties();
+
+            foreach (var item in properes)
+            {
+                if (item.MemberType == System.Reflection.MemberTypes.Property && item.PropertyType.IsPublic)
+                {
+                    try
+                    {
+                        object val = item.GetValue(obj, null);
+                        post.AppendFormat("&{0}={1}", item.Name, val);
+                    }
+                    catch
+                    {
+
+                    }
+                }
+            }
+
+            if(post.Length>0)
+                post.Remove(0,1);
+
+            return post.ToString();
+        }
+
+        /// <summary>
+        /// 将实体类转换为DataTable
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public static System.Data.DataTable ToDataTable<T>(this IList<T> obj)
+        {
+            System.Data.DataTable dt = new System.Data.DataTable();
+            System.Reflection.PropertyInfo[] propinfoes = typeof(T).GetProperties();
+            foreach (System.Reflection.PropertyInfo item in propinfoes)
+            {
+                System.Data.DataColumn col = new System.Data.DataColumn(item.Name, item.PropertyType);
+                dt.Columns.Add(col);
+            }
+
+            foreach (T item in obj)
+            {
+                System.Data.DataRow row = dt.NewRow();
+                for (int i = 0; i < propinfoes.Length; i++)
+                {
+                    row[i] = propinfoes[i].GetValue(item, null);
+                }
+                dt.Rows.Add(row);
+            }
+            return dt;
+        }
+
+        /// <summary>
+        /// 将DataRow转换为实体对象(区分大小写)
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="row"></param>
+        /// <returns></returns>
+        public static T ToEntityFormDataRow<T>(this DataRow row) where T : class,new()
+        {
+            T obj = new T();
+
+            foreach (DataColumn col in row.Table.Columns)
+            {
+                PropertyInfo p = typeof(T).GetProperty(col.ColumnName);
+                if (null != p)
+                {
+                    object cell = row[col.ColumnName];
+                    Type t = p.PropertyType;
+                    if (cell is System.DBNull)
+                    {
+                        if (t.IsValueType)
+                            cell = 0;
+                        else
+                            cell = null;
+                    }
+                    p.SetValue(obj, cell, null);
+                }
+            }
+
+            return obj;
+        }
+
+        /// <summary>
+        /// 将DataRow转换为实体对象(区分大小写)
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="row"></param>
+        /// <returns></returns>
+        public static T ToEntityFormDataRow<T>(this DataRowView row) where T : class,new()
+        {
+            T obj = new T();
+
+            foreach (DataColumn col in row.DataView.Table.Columns)
+            {
+                PropertyInfo p = typeof(T).GetProperty(col.ColumnName);
+                if (null != p)
+                {
+                    object cell = row[col.ColumnName];
+                    Type t = p.PropertyType;
+                    if (cell is System.DBNull)
+                    {
+                        if (t.IsValueType)
+                            cell = 0;
+                        else
+                            cell = null;
+                    }
+                    p.SetValue(obj, cell, null);
+                }
+            }
+
+            return obj;
+        }
+		
+	
+	

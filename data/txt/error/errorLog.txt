@@ -1,0 +1,14 @@
+author:yj
+
+since:2018-2-6
+
+direction:error log
+
+1.devenv.exe- 应用程序错误 "0x3586b8d0"指令应用的"0x3586b8d0"内存。该内存不能为"read".
+　　开始->所有程序->Microsoft Visual Stdio 2010->Visual Stdio Tools->Visual Stdio 2010 命令提示
+　　这时会弹出一个命令行对话框, 输入cd..退到上一级目录, 然后 cd Common7\IDE
+　　进入该目录后,再输入devenv.exe /setup /resetuserdata /resetsettings
+　　重新初始化 VS2010
+　　打开VS时候出现 “上次加载该解决方案，打开关联文档时遇到错误。
+　　为了避免该错误，这次解决方案加载将跳过文档加载错误，也可以使用该方法恢复。
+　　也可以直接在命令行里敲入命令：devenv /resetsettings

@@ -1,0 +1,30 @@
+  public override void Insert<T>(DbConnection conn, DbTransaction trans, T entity, string tablename)
+    {
+      EntityConfig entityConfig = this.EntitiesConfigContext[entity.GetType()];
+      PropertyConfig[] array1 = ((IEnumerable<PropertyConfig>) entityConfig.PropertyConfigs).Where<PropertyConfig>((Func<PropertyConfig, bool>) (p =>
+      {
+        if (!p.IsPrimaryKey && p.PropertyInfo.GetValue((object) (T) entity, (object[]) null) != null)
+          return true;
+        if (p.IsPrimaryKey)
+          return p.Generator == KeyGenerator.Manual;
+        return false;
+      })).ToArray<PropertyConfig>();
+      string str1 = string.Join(",", ((IEnumerable<PropertyConfig>) array1).Select<PropertyConfig, string>((Func<PropertyConfig, string>) (p => p.PropertyInfo.Name)).ToArray<string>());
+      string str2 = string.Join(",", ((IEnumerable<PropertyConfig>) array1).Select<PropertyConfig, string>((Func<PropertyConfig, string>) (p => "@" + p.PropertyInfo.Name)).ToArray<string>());
+      SqlParameter[] array2 = ((IEnumerable<PropertyConfig>) array1).Select<PropertyConfig, SqlParameter>((Func<PropertyConfig, SqlParameter>) (p => new SqlParameter("@" + p.PropertyInfo.Name, p.PropertyInfo.GetValue((object) (T) entity, (object[]) null)))).ToArray<SqlParameter>();
+      string commandText = string.Format("insert into {0} ({1}) values({2})", string.IsNullOrEmpty(tablename) ? (object) entityConfig.TableName : (object) tablename, (object) str1, (object) str2);
+      this.PrepareCommand(conn, trans, commandText, (DbParameter[]) array2, CommandType.Text).ExecuteNonQuery();
+      PropertyConfig propertyConfig = ((IEnumerable<PropertyConfig>) entityConfig.PropertyConfigs).Where<PropertyConfig>((Func<PropertyConfig, bool>) (p =>
+      {
+        if (p.IsPrimaryKey)
+          return p.Generator == KeyGenerator.Identity;
+        return false;
+      })).SingleOrDefault<PropertyConfig>();
+      if (propertyConfig == null)
+        return;
+      DbCommand dbCommand = this.PrepareCommand(conn, trans, "select @@identity", (DbParameter[]) null, CommandType.Text);
+      propertyConfig.PropertyInfo.SetValue((object) entity, (object) Convert.ToInt32(dbCommand.ExecuteScalar()), (object[]) null);
+    }
+	
+	
+            me.Add(new SingleExpression("", LogicOper.CUSTOM, string.Format(" (InUserID={0} or OutUserID={0})", user.ID)));

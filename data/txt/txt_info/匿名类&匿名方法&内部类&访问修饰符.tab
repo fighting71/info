@@ -1,0 +1,171 @@
+direction:匿名类/匿名方法/内部类/访问修饰符
+
+author:yj
+
+since:2017-12-08 
+	
+	匿名类的定义：
+		new{
+			列名=值,
+			colum2 = value2
+			}
+	
+	匿名类的使用场合：
+		(java 适配器)
+		a.面对对象中常用父类作为参数定义方法，若调用此方法的实例仅用于
+	      此方法时便可以直接创建匿名类型重写父类方法作为传入参数
+		
+		(.net中)
+		b.在使用ef 或 linq 时，经常会出现需要获取所有列或需要获取多表
+		  的数据，此时可以直接通过匿名类new{.....}进行存储，类似与关系
+		  数据库中的临时表。
+		  
+		c.用于创建一个临时对象
+		  
+	匿名类》 after reflector：
+		（1）匿名类被编译后会生成一个[泛型类]
+
+			[DebuggerDisplay(@"\{ ID = {ID}, Name = {Name}, Type = {Type} }", Type="<Anonymous Type>"), CompilerGenerated]
+			internal sealed class <>f__AnonymousType0<<ID>j__TPar, <Name>j__TPar, <Type>j__TPar>
+			{
+				[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+				private readonly <ID>j__TPar <ID>i__Field;
+				[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+				private readonly <Name>j__TPar <Name>i__Field;
+				[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+				private readonly <Type>j__TPar <Type>i__Field;
+
+				[DebuggerHidden]
+				public <>f__AnonymousType0(<ID>j__TPar ID, <Name>j__TPar Name, <Type>j__TPar Type)
+				{
+					this.<ID>i__Field = ID;
+					this.<Name>i__Field = Name;
+					this.<Type>i__Field = Type;
+				}
+
+			}
+
+		
+　　	（2）匿名类所生成的属性都是只读的，可以看出与其对应的字段也是只读的；
+		
+		（3）匿名类还重写了基类的三个方法：Equals,GetHashCode和ToString；
+				[DebuggerHidden]
+				public override string ToString()
+				{
+					StringBuilder builder = new StringBuilder();
+					builder.Append("{ ID = ");
+					builder.Append(this.<ID>i__Field);
+					builder.Append(", Name = ");
+					builder.Append(this.<Name>i__Field);
+					builder.Append(", Type = ");
+					builder.Append(this.<Type>i__Field);
+					builder.Append(" }");
+					return builder.ToString();
+				}
+
+				[DebuggerHidden]
+				public override int GetHashCode()
+				{
+					int num = -1093979660;
+					num = (-1521134295 * num) + EqualityComparer<<ID>j__TPar>.Default.GetHashCode(this.<ID>i__Field);
+					num = (-1521134295 * num) + EqualityComparer<<Name>j__TPar>.Default.GetHashCode(this.<Name>i__Field);
+					return ((-1521134295 * num) + EqualityComparer<<Type>j__TPar>.Default.GetHashCode(this.<Type>i__Field));
+				}
+				
+				[DebuggerHidden]
+				public override bool Equals(object value)
+				{
+					var type = value as <>f__AnonymousType0<<ID>j__TPar, <Name>j__TPar, <Type>j__TPar>;
+					return ((((type != null) && EqualityComparer<<ID>j__TPar>.Default.Equals(this.<ID>i__Field, type.<ID>i__Field)) && EqualityComparer<<Name>j__TPar>.Default.Equals(this.<Name>i__Field, type.<Name>i__Field)) && EqualityComparer<<Type>j__TPar>.Default.Equals(this.<Type>i__Field, type.<Type>i__Field));
+				}
+
+	匿名类的共享：
+		（1）如果定义的匿名类与之前定义过的一模一样：属性类型和顺序都一致，那么默认共享前一个泛型类
+　　
+		（2）如果属性名称和顺序一致，但属性类型不同，那么还是共同使用一个泛型类，只是泛型参数改变了而已，所以在运行时会生成不同的类：
+		
+		（3）如果数据型名称和类型相同，但顺序不同，那么编译器会重新创建一个匿名类
+		
+	匿名方法:
+		
+		network:
+			a.info:https://www.cnblogs.com/edisonchou/p/4088959.html
+	
+		1.概述：
+			　C#中的匿名方法是在C#2.0引入的，它终结了C#2.0之前版本声明委托的唯一方法是使用命名方法的时代。
+			
+		基础的委托声明
+			1.声明委托
+			public deletage void DeletageName(string str);
+			
+			2.定义方法
+			public static void ShowInfo(string str)
+			{
+				Console.WriteLine("Hello {0}",str);
+			}
+		
+			3.创建委托并指定引用
+			DeletageName myDeletage = new DeletageName(ShowInfo);
+		
+		使用匿名方法：
+			DeletageName myDeletage = new DeletageName(deletage(string str)
+			{
+				Console.WriteLine("Hello {0}",str);
+			});
+		
+		After reflector：
+			编译器对于匿名方法帮我们做了两件事，
+			一是生成了一个私有静态的委托对象和一个私有静态方法；
+			二是将生成的方法的地址存入了委托，在运行时调用委托对象的Invoke方法执行该委托对象所持有的方法。
+			因此，我们也可以看出，匿名方法需要结合委托使用。
+			
+	内部类
+		......
+		
+	修饰符:
+		
+		8个声明修饰符
+  
+		   Partial：在整个同一程序集中定义分部类和结构，详解见问题1。
+		   Static： 声明属于类型本身而不是属于特定对象的成员。
+		   Abstract：抽象类，只能是其他类的基类。类中的方法只声明不实现，方法的实现在他的派生类中完成。
+		   Sealed：指定类不能被继承。
+		   Virtual：用于修饰方法、属性、索引器或事件声明，并且允许在派生类中重写这些对象
+			Override：提供从基类继承的成员的新实现
+			New：作修饰符，隐藏从基类成员继承的成员，在不使用 new 修饰符的情况下隐藏成员是允许的，但会生成警告。作运算符，用于创建对象和调用构造函数。
+		   Extern：用于声明在外部实现的方法。 extern 修饰符的常见用法是在使用 Interop 服务调入非托管代码时与 DllImport 特性一起使用。 
+		   在这种情况下，还必须将方法声明为 static
+		   Virtual，override和new 的区别
+		1.       virtual和override配套使用。在基类base中声明了虚方法method（）并用virtual修饰，在子类derived中重写方法method（）并用override修饰。那么当将子类的实例赋予基类的对象（不需要强制转换）时即Base Bclass= new Derived（）；Bclass.Method（）是调用了子类的method（）方法，而不是基类的。所以
+		2.       new不需要和virtual配套使用。在基类base中声明了方法method（），在子类derived中声明了同名的方法method（）并用new修饰。那么当将子类的实例赋予基类的对象时即Base Bclass= new Derived（）；Bclass.Method（）是调用了基类类的method（）方法，而不是子类的。
+		3.       这说明,override可以覆盖基类的方法,让基类的方法以子类的内容实现,而new不用来覆盖基类的方法,而是全新定义一个子类的方法,这个方法只属于子类,与基类的方法无关,只是名字上相同而已.
+		
+ 
+		4个访问修饰符
+			Public：公有的，是类型和类型成员的访问修饰符。对其访问没有限制。
+			Internal：内部的，是类型和类型成员的访问修饰符。同一个程序集中的所有类都可以访问
+			Private：私有的，是一个成员访问修饰符。只有在声明它们的类和结构中才可以访问。
+			Protected:：受保护的，是一个成员访问修饰符。只能在它的类和它的派生类中访问。
+			protected internal：访问级别为 internal 或 protected。即，“同一个程序集中的所有类，以及所有程序集中的子类都可以
+
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		

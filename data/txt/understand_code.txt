@@ -1,0 +1,299 @@
+
+author:yj
+since:2017-12-28 9:08
+direction:understand code
+
+Basic operation:
+	Get Service: ServiceFactory.GetService<T>();
+	
+	cless defind:UserService : Common.BaseService<User>
+	
+	Implement:
+		public static Dictionary<string, object> services = new Dictionary<string, object>();
+
+        public static T GetService<T>() where T : new ()
+        {
+            Type t = typeof(T);
+
+            lock (services)
+            {
+                T service;
+
+                if (!services.ContainsKey(t.FullName))  //是否包含指定的键，也就是，是否存在该Key 值 FullName包含命名空间
+                {
+                    service = new T();                  //实列化参数对象 
+                    services.Add(t.FullName, service);  // 类名 对应 该 实体类，根据自己对应的key ,添加到Dictionary 中
+                }
+                return (T)services[t.FullName];         //根据索引返回
+            }
+        }
+
+service Operation:
+	
+	class defind:BaseService<T> : IService where T : class, new()
+	
+	method:
+	
+        /// <summary>
+        /// 新增
+        /// </summary>
+        /// <param name="t"></param>
+        public void Insert(T t)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                s.Insert<T>(t);
+            }
+        }
+
+        /// <summary>
+        /// 根据自定义表名 新增
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="tablename"></param>
+        public void Insert(T t, string tablename)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                s.Insert<T>(t, tablename);
+            }
+        }
+
+        /// <summary>
+        /// 删除
+        /// </summary>
+        /// <param name="ID"></param>
+        public void Delete(long Id)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                s.Delete<T>(Id);
+            }
+        }
+
+        /// <summary>
+        /// 根据自定义表名 删除 
+        /// </summary>
+        /// <param name="Id"></param>
+        /// <param name="tablename"></param>
+        public void Delete(long Id, string tablename)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                s.Delete<T>(Id, tablename);
+            }
+        }
+
+        /// <summary>
+        /// 批量删除
+        /// </summary>
+        /// <param name="Id"></param>
+        public void Delete(long[] Ids)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                s.Delete<T>(Ids);
+            }
+        }
+
+        /// <summary>
+        /// 根据自定义表名 批量删除
+        /// </summary>
+        /// <param name="Ids"></param>
+        /// <param name="tablename"></param>
+        public void Delete(long[] Ids, string tablename)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                s.Delete<T>(Ids, tablename);
+            }
+        }
+
+        /// <summary>
+        /// 修改
+        /// </summary>
+        /// <param name="t"></param>
+        public void Update(T t, string tablename)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                s.Update<T>(t, tablename);
+            }
+        }
+
+        /// <summary>
+        /// 根据自定义表名 修改
+        /// </summary>
+        /// <param name="t"></param>
+        public void Update(T t)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                s.Update<T>(t);
+            }
+        }
+
+        /// <summary>
+        /// 是否存在
+        /// </summary>
+        /// <param name="Id"></param>
+        public int Exist(string where_sql, params object[] p)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                return s.Exist<T>(where_sql, p);
+            }
+        }
+
+        /// <summary>
+        /// 根据Id获取
+        /// </summary>
+        /// <param name="Id"></param>
+        public T GetById(long Id)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                return s.Get<T>(Id);
+            }
+        }
+
+        /// <summary>
+        /// 自定义表名 根据Id获取
+        /// </summary>
+        /// <param name="Id"></param>
+        /// <param name="tablename"></param>
+        /// <returns></returns>
+        public T GetById(long Id, string tablename)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                return s.Get<T>(Id, tablename);
+            }
+        }
+
+        /// <summary>
+        /// 获取数据列表
+        /// </summary>
+        /// <param name="c"></param>
+        /// <returns></returns>
+        public List<T> GetList(Criteria c)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                return s.List<T>(c);
+            }
+        }
+
+        /// <summary>
+        /// 获取数据列表
+        /// </summary>
+        /// <param name="wheresql"></param>
+        /// <param name="paraments"></param>
+        /// <returns>T</returns>
+        public List<T> GetList(string wheresql, params object[] paraments)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                return s.List<T>(wheresql, paraments);
+            }
+        }
+
+        /// <summary>
+        /// 获取分页列表
+        /// </summary>
+        /// <param name="totalCount">返回记录总数</param>
+        /// <param name="orderBy">排序</param>
+        /// <param name="pageIndex"></param>
+        /// <param name="pageSize"></param>
+        /// <returns></returns>
+        public List<T> GetPageList<K>(int pageIndex, int pageSize, Expression<Func<T, K>> orderBy, out int totalCount)
+        {
+            //查询对象
+            Criteria ct = new Criteria();
+
+            //查询表达式
+            MutilExpression me = new MutilExpression();
+
+            ct.SetPageSize(pageSize)
+            .SetStartPage(pageIndex)
+            .SetFields(new string[] { "*" });
+
+            if (orderBy is MemberExpression)
+            {
+                ct.AddOrderBy(new OrderBy(((MemberExpression)orderBy.Body).Member.Name, "desc"));
+            }
+            if (me.Expressions.Count > 0)
+            {
+                ct.SetWhereExpression(me);
+            }
+            var list = GetList(ct);
+
+            totalCount = ct.TotalRow;
+
+            return list;
+        }
+        /// <summary>
+        /// 获取Top数据
+        /// </summary>
+        /// <param name="count"></param>
+        /// <param name="wheresql"></param>
+        /// <param name="paraments"></param>
+        /// <returns></returns>
+        public List<T> GetTop(int count, string wheresql, params object[] paraments)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                return s.GetTop<T>(count, wheresql, paraments);
+            }
+        }
+
+        /// <summary>
+        /// 获取所有
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns>T</returns>
+        public List<T> GetAll()
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                return s.List<T>("", "");
+            }
+        }
+
+        /// <summary>
+        /// 获取数据列表
+        /// </summary>
+        /// <param name="criteria"></param>
+        /// <returns></returns>
+        public DataTable Fill(Criteria criteria)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                return s.Fill(criteria);
+            }
+        }
+
+        /// <summary>
+        /// 获取数据列表
+        /// </summary>
+        /// <param name="sql"></param>
+        /// <param name="paraments"></param>
+        /// <returns></returns>
+        public DataTable Fill(string sql, params object[] paraments)
+        {
+            using (ISession s = SessionFactory.Instance.CreateSession())
+            {
+                return s.Fill(sql, paraments);
+            }
+        }
+		
+	use Demo:
+		
+        var ctgyid = ServiceFactory.GetService<InformtCgtyService>().GetList("where No=@0", param_key.ConfigVal).FirstOrDefault().ID;
+		
+		var data = ServiceFactory.GetService<#ServiceName>().GetList(#sql,param...);//
+		
+		
+		
+		
+	

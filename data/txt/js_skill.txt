@@ -1,0 +1,94 @@
+author:yj
+
+since:2018-1-5
+
+direction:js skill
+
+>>>>>>>>>>>>>>>>.net Date-->js Date
+
+var json = { "Name": "张三", "Age": 28, "LastLoginTime": "\/Date(1313572554031)\/" };
+//把/删除，并转换为正确的javascript时间
+json.LastLoginTime = eval('new ' + (json.LastLoginTime.replace(/\//g, '')));搜索
+alert(json.LastLoginTime);
+
+>>>>>>>>>>>>>>>>string format
+String.prototype.format = function () {
+    var args = arguments;
+    return this.replace(/\{(\d+)\}/g, function (m, i) {
+        return args[i];
+    });
+};
+
+>>>>>>>>>>>>>>>date format
+Date.prototype.format = function (format) {
+    var o = {
+        "M+": this.getMonth() + 1,
+        "d+": this.getDate(),
+        "h+": this.getHours(),
+        "m+": this.getMinutes(),
+        "s+": this.getSeconds(),
+        "q+": Math.floor((this.getMonth() + 3) / 3),
+        "S": this.getMilliseconds()
+    }
+    if (/(y+)/.test(format)) {
+        format = format.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
+    }
+    for (var k in o) {
+        if (new RegExp("(" + k + ")").test(format)) {
+            format = format.replace(RegExp.$1, RegExp.$1.length == 1 ? o[k] : ("00" + o[k]).substr(("" + o[k]).length));
+        }
+    }
+    return format;
+};
+
+>>>>>>>>>>extension
+  String.prototype.GetMoney = function () {
+        var val = parseInt(this);
+        var result = '';
+        if (val < 10000) {
+            result = val.toFixed(2);
+        }
+        else if (val >= 10000 && val < 100000000) {
+            if (val % 10000 > 0) {
+                result = (val / 10000).toFixed(2) + "万";
+            }
+            else {
+                result = (val / 10000).toFixed(0) + "万";
+            }
+        }
+        else if (val >= 100000000) {
+            if (val % 100000000 > 0) {
+                result = (val / 100000000).toFixed(2) + "亿";
+            }
+            else {
+                result = (val / 100000000).toFixed(0) + "亿";
+            }
+        }
+        return result;
+    };
+	
+>>>>>>>>>>search browser method
+ var browser = {
+        versions: function () {
+            var u = navigator.userAgent, app = navigator.appVersion;
+            return {//移动终端浏览器版本信息
+                trident: u.indexOf('Trident') > -1, //IE内核
+                presto: u.indexOf('Presto') > -1, //opera内核
+                webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+                gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+                mobile: !!u.match(/AppleWebKit.*Mobile.*/) || !!u.match(/AppleWebKit/), //是否为移动终端
+                ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+                android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+                iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者QQHD浏览器
+                iPad: u.indexOf('iPad') > -1, //是否iPad
+                webApp: u.indexOf('Safari') == -1 //是否web应该程序，没有头部与底部
+            };
+        }(),
+        language: (navigator.browserLanguage || navigator.language).toLowerCase()
+    };
+    $(function () {
+        if (browser.versions.ios || browser.versions.iPhone || browser.versions.iPad || browser.versions.android) {          
+            $("nav").hide();
+        } 
+       
+    });

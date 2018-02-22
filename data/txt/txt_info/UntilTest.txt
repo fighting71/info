@@ -1,0 +1,13 @@
+
+direction:单元测试
+
+author:yj
+
+since:2017-12-09 14:59:23
+
+			//测试方法：
+            //参数1  方法调用
+            //参数2 预计值
+            Assert.AreEqual(info.GetSum(num1,num2), 30);
+
+			onLine info:https://www.cnblogs.com/lsxqw2004/p/4793623.html

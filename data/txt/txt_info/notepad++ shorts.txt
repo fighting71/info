@@ -1,0 +1,8 @@
+--------------------notepad++
+ctrl + L :删除当前行
+ctrl + shift + up/down :移动当前行
+ctrl + shift + u:转大写
+ctrl + u :转小写
+
+--------------------vistual studio
+#ctrl + k ctrl + s

@@ -1,0 +1,44 @@
+
+author:yj
+
+since:2017-12-24 18:19
+
+direction:summarize useful sites
+
+	http VS https:https://www.cnblogs.com/wqhwe/p/5407468.html
+
+	code List:http://tool.oschina.net/commons/
+	
+	webservice_detail:http://blog.csdn.net/u014511737/article/details/46986389
+	
+	byte & 0xff:http://www.cnblogs.com/think-in-java/p/5527389.html
+	
+	.net operation:https://docs.microsoft.com/zh-cn/dotnet/csharp/language-reference/operators/
+	
+	ef first&&single difference:http://2sharings.com/2014/net-difference-between-first-firstordefault-single-singleordefault
+	
+	outside_browser:http://eire.www.info.com/
+	
+	github tool upload:https://desktop.github.com/
+	
+	csdn_document:https://social.msdn.microsoft.com/Search/zh-CN?query=HttpClientHandler&pgArea=header&emptyWatermark=true&ac=4
+	
+	create_service_byTopShelf:http://www.cnblogs.com/jys509/p/4614975.html
+	
+	quartz_basic_study:https://www.cnblogs.com/jys509/p/4628926.html
+	
+	chrome extension install:http://www.cnplugins.com/zhuanti/how-to-make-crx-install.html
+	
+	System.OutOfMemoryException asp net MVC:http://blog.csdn.net/netbug2009/article/details/6068501
+	
+	web layer frame:http://layer.layui.com/mobile/		http://www.layui.com/
+	
+	C# regex demo:http://blog.csdn.net/Paris_chenxin/article/details/52885720
+	
+	resharper shorts:https://www.cnblogs.com/yjung/p/5286165.html
+	
+	ReactiveExtensions:https://www.cnblogs.com/yangecnu/archive/2012/11/03/Introducting_ReactiveExtensions.html
+	
+	source_forum:https://www.52pojie.cn/
+	
+	lucene.net_code:http://blog.csdn.net/lybwwp/article/details/53008374

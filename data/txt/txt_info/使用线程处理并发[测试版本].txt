@@ -1,0 +1,61 @@
+
+author:yj
+
+since:2017-12-28
+
+direction:使用线程处理并发[测试版本]
+
+version:1.0.0
+
+  public bool OperationInfo(ISession s, List<CreditBid> bidList, StateCode state, Credit credit, SysUser sysuser, CreditDetail detail, User borrower)
+        {
+
+            bool flag = true;
+            operationList.Clear();
+            operationList.AddRange(bidList);
+
+            try
+            {
+                foreach (var bid in bidList)
+                {
+
+                    ThreadPool.QueueUserWorkItem(u =>
+                    {
+                        lock (s)//锁住操作对象 避免重复操作信息
+                        {
+                            s.StartTransaction();//一个线程对应一个事务
+
+                            if (DealInfo(s, bid, state, credit, sysuser, detail, borrower))//执行操作
+                            {//操作成功
+                                s.Commit();//提交事务
+                                operationList.Remove(bid);//移除已处理的信息
+                            }
+                            else
+                            {
+                                s.RollBack();//回滚事务
+                            }
+                        }
+
+                    });
+
+                }
+                if (operationList.Count > 0)
+                {//存在部分信息未处理 -- 即事务操作失败
+                    bidList = operationList;//记录未处理信息集合
+                    return OperationInfo(s, bidList, state, credit, sysuser, detail, borrower);//使用递归重新进行操作
+                }
+                else
+                {
+                    flag = true;
+                }
+
+            }
+            catch (Exception e)
+            {
+                flag = false;
+                Logger.Error(e.Message);
+            }
+
+            return flag;
+
+        }

@@ -1,0 +1,5 @@
+test包里面的是测试类  可以删除
+servlet包里面  就是通过调用service类中的方法实现对数据库的增删改 例如AddCollectServlet 就是调用service包中的添加Collect表的方法并获取一些所需参数
+service包里面就是放 调用dao包中的方法 例如：AddCollectService  就是一个放添加Collect表的类
+pojo包里面 就 实体类  对应mysql里面的表
+dao包里面  就一些 操作类  例如：CollectMapper  就是放对Collect表操作的方法

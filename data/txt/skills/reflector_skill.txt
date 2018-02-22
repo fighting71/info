@@ -1,0 +1,20 @@
+author:yj
+
+since:2018-1-23
+
+direction:reflector skill
+
+>>>使用枚举配合方法进行反射调用
+			//找到地址
+            BasicDao dao = new BasicDao();
+
+            //找到要操作的信息
+            var code = Operation_Menu.GetBasicInfo;
+
+            //找到要操作的方法
+            var type = dao.GetType();
+            var methodInfo = type.GetMethod(code.ToString());
+
+            var result = methodInfo.Invoke(dao,null);
+
+            Console.WriteLine("返回结果：{0}",result);

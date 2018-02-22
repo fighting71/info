@@ -1,0 +1,27 @@
+direction:var/dynamic
+
+author:yj
+
+since:2017-12-10 10:49:23
+
+	description:
+		var 和 dynamic 是vs中特殊的变量声明关键字 ， 其具体类型在编译运行时转换
+		var :   匿名类型
+				初始声明时不可赋空值
+				var #varName = value;
+				var #varName = #expression;
+				
+		dynamic: 可变类型
+				可以接受任意类型，同理在使用时可以调用任意属性或改变赋值
+				dynamic #varName = value;
+				#varName = value;
+				
+				原理：编译后自己进行装/拆箱  运行时进行调用检验
+				
+		特点：
+			编码效率高
+			有效减少装/拆箱，从而减少代码量
+			
+		缺点：
+			在使用dynamic时由于其可以接受任意类型还可以调用任意类型
+			故使用时安全性的检验会有所下降，需谨慎使用,建议手动使用is / as进行检验和使用

@@ -1,0 +1,47 @@
+direction:spring + tt模板 + 三层 MVC + 实体模型 项目搭建
+
+author:yj
+
+since:2017-12-08 15:23:53
+	
+			
+	spring + tt模板 + 三层 MVC + 实体模型
+	
+		1.web配置 spring.net 数据关系模型 log4j
+			此处省略...
+		
+		2.MvcApplication 配置：
+			//把多个css文件在一起请求，浏览器只发一次请求
+            //好处：把多个css文件在一起请求，浏览器只发一次请求
+            BundleTable.EnableOptimizations = true;
+
+            //从配置文件读取log4net的配置，然后进行一个初始化工作。
+            log4net.Config.XmlConfigurator.Configure();
+			
+		3.项目目录：
+			xdStore:
+				DAL
+					FACTORY
+						*DbSession
+						*DbFactory
+					EFDAL
+					IDAL
+						*IDbSession
+				BLL
+					IBLL
+					BLL
+				COMMAND
+				UI
+				MODELS
+			
+		4.tt模板：
+			请查阅t4模板
+			
+		5.配置spring:
+			Global.asax中：
+				类继承修改为》》
+				 MvcApplication : SpringMvcApplication
+			
+			
+			
+			

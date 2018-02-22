@@ -1,0 +1,120 @@
+
+author:yj
+
+since:2017-12-24 18:44
+
+direction:http_info
+
+	example:
+			//请求地址
+            string url = "http://localhost:55345/MyWebService.asmx/GetJson";
+
+            HttpWebRequest request = null;
+            HttpWebResponse response = null;
+            var param = "123";//请求参数
+            var resultInfo = "";//响应数据
+
+			#region  创建请求对象
+
+            if (url.ToLower().Contains("https"))
+            {
+//https 》》 更加安全的协议
+
+                //验证用于身份验证的远程安全套接字层 (SSL) 证书。
+                ServicePointManager.ServerCertificateValidationCallback =
+                    new RemoteCertificateValidationCallback((a, b, c, d) =>
+                    {
+                        return true; //接受指定证书进行身份验证。
+                    });
+
+                //通过url创建相应的请求对象
+                request = (System.Net.HttpWebRequest) System.Net.HttpWebRequest.Create(url);
+
+                //ProtocolVersion:获取或设置用于请求的 HTTP 版本。
+                //默认值为 System.Net.HttpVersion.Version11。
+                request.ProtocolVersion = System.Net.HttpVersion.Version10;
+            }
+            else
+            {
+                request = (HttpWebRequest) HttpWebRequest.Create(url);
+            }
+
+			#endregion 创建请求对象
+
+			#region 记录Cookie信息
+
+//            string server = request.RequestUri.Authority;
+//            if (this.SetCookies.ContainsKey(server))
+//            {
+//                string _setcookie = this.SetCookies[server];
+//                if (!string.IsNullOrEmpty(_setcookie))
+//                {
+//                    if (request.CookieContainer == null)
+//                        request.CookieContainer = new CookieContainer();
+//                    request.CookieContainer.SetCookies(request.RequestUri, _setcookie);
+//                }
+//            }
+			#endregion 记录Cookie信息
+
+            try
+            {
+                //设置超时时间
+                request.Timeout = 2000;
+
+                //设置请求方式
+                request.Method = "POST";
+
+                //设置http请求头
+                request.ContentType = "application/x-www-form-urlencoded";
+
+                //验证是否传递参数
+                if (!string.IsNullOrEmpty(param))
+                {
+                    //传递请求参数
+                    byte[] writeBuffer = Encoding.UTF8.GetBytes(param);
+                    request.ContentLength = writeBuffer.Length;
+
+                    if (request.ContentLength > 0)
+                    {
+                        System.IO.Stream write = request.GetRequestStream();
+                        write.Write(writeBuffer, 0, writeBuffer.Length);
+                        write.Close();
+                    }
+                }
+	
+                //通过请求对象发起请求并获取响应对象
+                response = (System.Net.HttpWebResponse)request.GetResponse();
+            }
+            catch (System.Net.WebException ex)
+            {
+                //获取协议异常时返回的响应对象
+                response = (System.Net.HttpWebResponse)ex.Response;
+            }
+            catch (Exception e)
+            {//其他异常
+                throw e;
+            }
+            
+            //响应非空验证
+            if (null != response)
+            {
+                //解析响应流
+                System.IO.Stream respSM = response.GetResponseStream();
+
+                //通过流获取读取对象
+                System.IO.StreamReader sr = new System.IO.StreamReader(respSM);
+                
+                //通过流进行数据解析
+                string result = sr.ReadToEnd();
+
+                response.Close();
+                sr.Close();
+
+                resultInfo = result;
+            }
+            else
+                resultInfo = string.Empty;
+
+            Console.WriteLine("请求成功：获取的数据为："+resultInfo);
+
+	

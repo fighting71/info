@@ -1,0 +1,42 @@
+author:yj
+
+since:2018-1-19
+
+direction:yield
+
+	语法糖，此关键常配合IEnumerator进行使用
+	
+	1.实例：
+		public IEnumberator<T> GetInfo<T>(T breakFlag){
+			
+		}
+		
+		 /// <summary>
+        /// 加载信息
+        /// </summary>
+        /// <param name="breakFlag">结束标识</param>
+        /// <returns></returns>
+        public IEnumerable<int> LoadInfo(int breakFlag)
+        {
+            for (int i = 0; i < 100; i++)
+            {
+                if (i == breakFlag)
+                {
+                    yield break;
+                }
+                else
+                {
+                    yield return i;
+                }
+            }
+        } 
+		
+		a.常用的遍历 VS yield遍历
+			常用的遍历会先将集合加载在内存中，然后再进行遍历处理
+			yield遍历则不需要将集合加载在内存中，再进行遍历，而是获取到一个元素就返回一个元素
+			相对而言，在面对特殊遍历时，yield遍历效率会优于常用遍历
+			
+		b.关键字说明
+			yield return 用于返回元素
+			yield break 用于结束此遍历，代表已无其他元素
+			

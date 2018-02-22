@@ -1,0 +1,53 @@
+author:yj
+
+since:2017-12-28
+
+direction:核保审批通过  CreditService  CreditAudit
+
+	操作参数：
+        /// <param name="sysuser">系统操作用户</param>
+        /// <param name="Id">借记编号</param>
+
+	操作流程：
+		1.获取借记信息
+		    CreditDetail detail = s.Get<CreditDetail>("where CreditID = @0", Id);	
+			1.1验证信息：
+				a.非空验证
+				b.还款方式验证
+				c.借记状态验证
+				d.借款人数据校验
+		
+		2.所有有效的投标记录
+			  string sql =
+                        "select SUM(ISNULL(Amount,0)) BidAmount from [T_Credit_Bid] where CreditID = @0 and FreezeTrxId IS NOT NULL and IsEnable = @1";
+                    object BidAmount = s.ExecuteScalar(sql, Id, true);
+			2.1验证信息：
+				a.投标额度与借款项目额度判断
+				
+				
+		3.获取标投资信息
+			List<CreditBid> bidList =
+                       s.List<CreditBid>(
+                            "where CreditID = @0 and IsEnable = @1 and IsLoanDone = @2 and ((BidType=0  and FreezeTrxId IS NOT NULL ) or (BidType in (2,3)))",
+                            Id, true, false);
+							
+		4. 更新放款时间 和返款时间
+			   s.ExcuteUpdate("update T_Credit_Detail set LoanTime = @0,BackTime = @1 where CreditID = @2",
+                        DateTime.Now, detail.BackTime, Id);
+						
+		5.遍历处理所有投资信息
+			5.1新增本地数据库还款计划
+			5.2推荐费
+				a.获取投资人
+				b.获取用户推荐人
+					i.获取推荐佣金配置
+					ii.添加推荐收益记录
+			5.3请求到汇付放款
+				a.获取自动扣款参数
+				b.通过网络请求对参数进行加签审核
+			5.4更新投标记录,标记已成功放款
+			5.5更新投标资金流记录状态 IsFreeze:解冻，FeeType:投标业务
+			5.6批量更新还款计划
+			5.7更新首次投标奖励记录 IsComputing:是否是有效的资金流水
+			5.8更新投标推荐收益记录
+			5.9新增系统日志

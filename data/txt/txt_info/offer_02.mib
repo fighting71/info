@@ -1,0 +1,86 @@
+author:yj
+
+since:2017-12-7 19:39:12
+
+description:search condition by network for get my lack
+
+	1.webservice
+		a.webservice的创建、部署、调用
+			https://www.cnblogs.com/Brambling/p/6815565.html
+
+			
+		b.处理websevice跨域问题：
+			在配置文件<system.web>节点中新增：
+			<webServices>
+				  <protocols>
+					  <add name="HttpSoap"/>
+					  <add name="HttpPost"/>
+					  <add name="HttpGet"/>
+				  </protocols>
+			</webServices>
+			
+		c.使用json作为返回值：
+			i.在配置文件<configuration>节点中新增：
+		    <!--配置JSON序列化-->
+			<system.web.extensions>
+				<scripting>
+					<webServices>
+						<jsonSerialization maxJsonLength="10000"/>
+					</webServices>
+				</scripting>
+			</system.web.extensions>
+			
+			<system.webServer>
+			<httpProtocol>
+			  <customHeaders>
+				<add name="Access-Control-Allow-Methods" value="OPTIONS,POST,GET"/>
+				<add name="Access-Control-Allow-Headers" value="Origin,X-Requested-With,Content-Type,Accept" />
+				<add name="Access-Control-Allow-Origin" value="*"/>
+			  </customHeaders>
+			</httpProtocol>
+			
+			ii.后台关键性代码：
+				string json = JsonConvert.SerializeObject(info);
+				Context.Response.Write(json);
+				Context.Response.End();
+				
+	2.WebApi简述
+		WebApi是微软在VS2012 MVC4版本中绑定发行的，WebApi是完全基于Restful标准的框架。
+		RestFul: （英文：Representational State Transfer，简称REST）
+		网上关于Restful定义的资料很多，我个人理解的Restful api 是指基于资源的定义的接口,
+		它的所有接口都是对资源的操作。REST的核心原则是将你的API拆分为逻辑上的资源。这些资源通过http被操作（GET ,POST,PUT,DELETE).Restful Api接口标准的定义满足CURD，标准的接口定义如下：
+
+		Post:新增记录
+		Put:修改记录
+		Get:获取数据
+		Delete:删除数据
+		
+		webapi标准的定义形式为：每个controller都对应一个Model，controller中的接口都应该是对controller所对应的那个model进行的操作，
+		所以上诉的post,get,put,delete都是对model所对应的资源操作。但是在实际的操作中，可能没有办法完全满足这种定义的形式，力求尽量满足。
+				
+	3.消息队列
+		
+	4.oracle:
+		a.基础语法 http://blog.csdn.net/maomao092092/article/details/7700228
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				

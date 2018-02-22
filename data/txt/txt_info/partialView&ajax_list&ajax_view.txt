@@ -1,0 +1,146 @@
+direction:分部视图/ajax无刷新列表、视图
+
+author:yj
+
+since:2017-12-09 15:03:32
+
+	1.存放目录：
+		in Shared folder
+		
+	2.方法定义：
+		public ActionResult Menu_Top(object params)
+        {
+
+            return PartialView("Menu_Top");
+
+        }
+		
+	3.使用方法：
+		@*@Html.Partial("Menu_Top",ViewData["guestInfo"])*@
+
+		@* 直接写入Http流的方式进行输出，因此可用于输出图片、文件。 *@
+	    @* @{Html.RenderPartial("Menu_Top", ViewData["guestInfo"]);}*@
+		@Html.Action("Menu_Top", "Home")
+		
+	4.ajax表单
+	
+						相关js:
+						
+	<script src="~/Scripts/jquery.unobtrusive-ajax.min.js"></script>
+	
+    <script src="~/Scripts/jquery.validate.unobtrusive.min.js"></script>
+	
+						@using (Ajax.BeginForm(
+						"AddInfo",//Controller名称
+						"ReceiverAddress",//Action名称
+						new AjaxOptions()//提交参数
+						{
+							HttpMethod = "POST",//提交方式
+							OnSuccess = "afterAdd",//提交成功后执行的js函数
+							Confirm = "是否确认提交？"//提交的提示内容
+						}))
+						{
+							@Html.ValidationSummary(true)//是否开启实体验证
+							
+							<fieldset>
+								<legend>标题</legend>
+								<div class="editor-label">
+									@Html.LabelFor(model => model.#columnName)
+								</div>
+								<div class="editor-field">
+									@Html.EditorFor(model => model.#columnName)
+									@Html.ValidationMessageFor(model => model.#columnName)
+								</div>
+								....
+							</fieldset>
+							
+						}
+						
+						
+						
+	5.AjaxOptions属性详解：				
+						
+						
+		// 摘要:
+        //     获取或设置在提交请求之前显示在确认窗口中的消息。
+        //
+        // 返回结果:
+        //     要在确认窗口中显示的消息。
+        public string Confirm { get; set; }
+        //
+        // 摘要:
+        //     获取或设置 HTTP 请求方法（“Get”或“Post”）。
+        //
+        // 返回结果:
+        //     HTTP 请求方法。默认值为“Post”。
+        public string HttpMethod { get; set; }
+        //
+        // 摘要:
+        //     获取或设置指定如何将响应插入目标 DOM 元素的模式。
+        //
+        // 返回结果:
+        //     插入模式（“InsertAfter”、“InsertBefore”或“Replace”）。默认值为“Replace”。
+        public InsertionMode InsertionMode { get; set; }
+        //
+        // 摘要:
+        //     获取或设置一个值（以毫秒为单位），该值控制在显示或隐藏加载元素时的动画持续时间。
+        //
+        // 返回结果:
+        //     一个值（以毫秒为单位），控制显示或隐藏加载元素时的动画持续时间。
+        public int LoadingElementDuration { get; set; }
+        //
+        // 摘要:
+        //     获取或设置在加载 Ajax 函数时要显示的 HTML 元素的 id 特性。
+        //
+        // 返回结果:
+        //     加载 Ajax 函数时显示的元素 ID。
+        public string LoadingElementId { get; set; }
+        //
+        // 摘要:
+        //     获取或设置要在更新页面之前立即调用的 JavaScript 函数的名称。
+        //
+        // 返回结果:
+        //     更新页面之前，要调用的 JavaScript 函数的名称。
+        public string OnBegin { get; set; }
+        //
+        // 摘要:
+        //     获取或设置在实例化响应数据之后但在更新页面之前，要调用的 JavaScript 函数。
+        //
+        // 返回结果:
+        //     已实例化响应数据时，要调用的 JavaScript 函数。
+        public string OnComplete { get; set; }
+        //
+        // 摘要:
+        //     获取或设置在页面更新失败时要调用的 JavaScript 函数。
+        //
+        // 返回结果:
+        //     页面更新失败时，要调用的 JavaScript 函数。
+        public string OnFailure { get; set; }
+        //
+        // 摘要:
+        //     获取或设置在成功更新页面之后要调用的 JavaScript 函数。
+        //
+        // 返回结果:
+        //     成功更新页面之后，要调用的 JavaScript 函数。
+        public string OnSuccess { get; set; }
+        //
+        // 摘要:
+        //     获取或设置要使用服务器响应来更新的 DOM 元素的 ID。
+        //
+        // 返回结果:
+        //     要更新的 DOM 元素的 ID。
+        public string UpdateTargetId { get; set; }
+        //
+        // 摘要:
+        //     获取或设置要向其发送请求的 URL。
+        //
+        // 返回结果:
+        //     要向其发送请求的 URL。
+        public string Url { get; set; }
+						
+						
+						
+						
+						
+						
+						
